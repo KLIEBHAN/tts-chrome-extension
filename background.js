@@ -1,156 +1,183 @@
-function log(message, ...args) {
-  console.log(`[TTS Plugin] ${message}`, ...args);
-}
+const TTS_PLUGIN = {
+  LOG_PREFIX: '[TTS Plugin]',
+  ERROR_PREFIX: '[TTS Plugin Error]',
+  CONTEXT_MENU_ID: 'readSelectedText',
+  CONTEXT_MENU_TITLE: 'Vorlesen',
+  MAX_CHUNK_LENGTH: 50,
+  API_ENDPOINT: 'https://api.openai.com/v1/audio/speech',
+  TTS_MODEL: 'tts-1',
+  VOICE: 'alloy',
 
-function logError(message, ...args) {
-  console.error(`[TTS Plugin Error] ${message}`, ...args);
-}
+  log(message, ...args) {
+    console.log(`${this.LOG_PREFIX} ${message}`, ...args);
+  },
 
-function createContextMenu() {
-  chrome.contextMenus.create({
-    id: "readSelectedText",
-    title: "Vorlesen",
-    contexts: ["selection"]
-  }, () => {
-    if (chrome.runtime.lastError) {
-      logError("Fehler beim Erstellen des Kontextmenüs:", chrome.runtime.lastError);
-    } else {
-      log("Kontextmenü erfolgreich erstellt");
-    }
-  });
-}
+  logError(message, ...args) {
+    console.error(`${this.ERROR_PREFIX} ${message}`, ...args);
+  },
 
-chrome.runtime.onInstalled.addListener(() => {
-  log("Plugin installiert oder aktualisiert");
-  createContextMenu();
-});
-
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  log("Kontextmenü geklickt", info, tab);
-  if (info.menuItemId === "readSelectedText") {
-    getSelectedTextAndRead(tab.id);
-  }
-});
-
-function getSelectedTextAndRead(tabId) {
-  log("Versuche, ausgewählten Text zu erhalten");
-  chrome.tabs.sendMessage(tabId, {action: "getSelectedText"}, (response) => {
-    if (chrome.runtime.lastError) {
-      logError("Fehler beim Senden der Nachricht:", JSON.stringify(chrome.runtime.lastError));
-      return;
-    }
-    if (response && response.text) {
-      log("Ausgewählter Text erhalten, Länge:", response.text.length);
-      readText(response.text, tabId);
-    } else {
-      logError("Kein Text erhalten");
-      showError(tabId, "Kein Text ausgewählt");
-    }
-  });
-}
-function readText(text, tabId) {
-  log("Starte Textverarbeitung");
-  chrome.storage.local.get(['apiKey'], function(result) {
-    if (result.apiKey) {
-      log("API-Schlüssel gefunden, beginne Verarbeitung");
-      const chunks = splitTextIntoChunks(text);
-      processChunks(chunks, result.apiKey, tabId);
-    } else {
-      logError('API-Schlüssel nicht gefunden');
-      showError(tabId, "API-Schlüssel nicht gefunden");
-    }
-  });
-}
-
-function splitTextIntoChunks(text, maxLength = 50) {
-  const words = text.split(/\s+/);
-  const chunks = [];
-  let currentChunk = "";
-
-  for (let word of words) {
-    if ((currentChunk + word).length <= maxLength) {
-      currentChunk += (currentChunk ? " " : "") + word;
-    } else {
-      if (currentChunk) chunks.push(currentChunk.trim());
-      currentChunk = word;
-    }
-  }
-
-  if (currentChunk) chunks.push(currentChunk.trim());
-  return chunks;
-}
-
-function processChunks(chunks, apiKey, tabId) {
-  if (chunks.length === 0) {
-    log("Alle Chunks verarbeitet");
-    return;
-  }
-
-  const chunk = chunks.shift();
-  log(`Verarbeite Chunk: ${chunk}`);
-
-  fetchAudioFromOpenAI(chunk, apiKey)
-    .then(audioData => sendAudioToContentScript(tabId, audioData, chunks.length === 0))
-    .then(() => {
-      if (chunks.length > 0) {
-        setTimeout(() => processChunks(chunks, apiKey, tabId), 100); // Reduzierte Verzögerung
-      }
-    })
-    .catch(error => {
-      logError('Fehler beim Verarbeiten des Chunks:', error);
-      showError(tabId, "Fehler beim Verarbeiten des Textes: " + error.message);
-    });
-}
-function fetchAudioFromOpenAI(text, apiKey) {
-  log("Sende Anfrage an OpenAI API");
-  return fetch('https://api.openai.com/v1/audio/speech', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: "tts-1",
-      input: text,
-      voice: "alloy"
-    })
-  })
-  .then(response => {
-    if (!response.ok) {
-      return response.text().then(errorText => {
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      });
-    }
-    log("Antwort von OpenAI erhalten");
-    return response.arrayBuffer();
-  })
-  .then(audioData => {
-    log("Audio-Daten erhalten, Größe:", audioData.byteLength);
-    return btoa(String.fromCharCode(...new Uint8Array(audioData)));
-  });
-}
-
-function sendAudioToContentScript(tabId, audioData, isLastChunk) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, {action: "playAudio", audioData: audioData, isLastChunk: isLastChunk}, (response) => {
+  createContextMenu() {
+    chrome.contextMenus.create({
+      id: this.CONTEXT_MENU_ID,
+      title: this.CONTEXT_MENU_TITLE,
+      contexts: ['selection']
+    }, () => {
       if (chrome.runtime.lastError) {
-        reject(new Error(`Fehler beim Senden der Audio-Daten: ${chrome.runtime.lastError.message}`));
+        this.logError('Fehler beim Erstellen des Kontextmenüs:', chrome.runtime.lastError);
       } else {
-        log("Audio-Daten erfolgreich gesendet");
-        resolve();
+        this.log('Kontextmenü erfolgreich erstellt');
       }
     });
-  });
-}
+  },
 
+  async getApiKey() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['apiKey'], (result) => {
+        resolve(result.apiKey);
+      });
+    });
+  },
 
-function showError(tabId, message) {
-  logError("Zeige Fehler an:", message);
-  chrome.tabs.sendMessage(tabId, {action: "showError", error: message});
-}
+  async fetchAudioFromOpenAI(text, apiKey) {
+    this.log('Sende Anfrage an OpenAI API');
+    try {
+      const response = await fetch(this.API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: this.TTS_MODEL,
+          input: text,
+          voice: this.VOICE
+        })
+      });
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "logError") {
-    logError("Fehler vom Content-Script:", request.error);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      this.log('Antwort von OpenAI erhalten');
+      const audioData = await response.arrayBuffer();
+      this.log('Audio-Daten erhalten, Größe:', audioData.byteLength);
+      return btoa(String.fromCharCode(...new Uint8Array(audioData)));
+    } catch (error) {
+      this.logError('Fehler beim Abrufen der Audio-Daten:', error);
+      throw error;
+    }
+  },
+
+  splitTextIntoChunks(text) {
+    const words = text.split(/\s+/);
+    const chunks = [];
+    let currentChunk = '';
+
+    for (const word of words) {
+      if ((currentChunk + word).length <= this.MAX_CHUNK_LENGTH) {
+        currentChunk += (currentChunk ? ' ' : '') + word;
+      } else {
+        if (currentChunk) chunks.push(currentChunk.trim());
+        currentChunk = word;
+      }
+    }
+
+    if (currentChunk) chunks.push(currentChunk.trim());
+    return chunks;
+  },
+
+  async processChunks(chunks, apiKey, tabId) {
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      this.log(`Verarbeite Chunk ${i + 1}/${chunks.length}: ${chunk}`);
+      try {
+        const audioData = await this.fetchAudioFromOpenAI(chunk, apiKey);
+        await this.sendAudioToContentScript(tabId, audioData, i === chunks.length - 1);
+        
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 10)); // 10ms Pause zwischen Chunks
+        }
+      } catch (error) {
+        this.logError('Fehler beim Verarbeiten des Chunks:', error);
+        this.showError(tabId, `Fehler beim Verarbeiten des Textes: ${error.message}`);
+        break;
+      }
+    }
+  },
+
+  async sendAudioToContentScript(tabId, audioData, isLastChunk) {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.sendMessage(tabId, { action: 'playAudio', audioData, isLastChunk }, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(`Fehler beim Senden der Audio-Daten: ${chrome.runtime.lastError.message}`));
+        } else {
+          this.log('Audio-Daten erfolgreich gesendet');
+          resolve();
+        }
+      });
+    });
+  },
+
+  showError(tabId, message) {
+    this.logError('Zeige Fehler an:', message);
+    chrome.tabs.sendMessage(tabId, { action: 'showError', error: message });
+  },
+
+  async handleContextMenuClick(info, tab) {
+    this.log('Kontextmenü geklickt', info, tab);
+    if (info.menuItemId === this.CONTEXT_MENU_ID) {
+      try {
+        const selectedText = await this.getSelectedText(tab.id);
+        if (selectedText) {
+          const apiKey = await this.getApiKey();
+          if (apiKey) {
+            const chunks = this.splitTextIntoChunks(selectedText);
+            await this.processChunks(chunks, apiKey, tab.id);
+          } else {
+            this.showError(tab.id, 'API-Schlüssel nicht gefunden. Bitte in den Einstellungen konfigurieren.');
+          }
+        } else {
+          this.showError(tab.id, 'Kein Text ausgewählt');
+        }
+      } catch (error) {
+        this.logError('Fehler bei der Verarbeitung:', error);
+        this.showError(tab.id, `Fehler: ${error.message}`);
+      }
+    }
+  },
+
+  async getSelectedText(tabId) {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.sendMessage(tabId, { action: 'getSelectedText' }, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(`Fehler beim Abrufen des ausgewählten Textes: ${chrome.runtime.lastError.message}`));
+        } else if (response && response.text) {
+          this.log('Ausgewählter Text erhalten, Länge:', response.text.length);
+          resolve(response.text);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  },
+
+  init() {
+    chrome.runtime.onInstalled.addListener(() => {
+      this.log('Plugin installiert oder aktualisiert');
+      this.createContextMenu();
+    });
+
+    chrome.contextMenus.onClicked.addListener(this.handleContextMenuClick.bind(this));
+
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.action === 'logError') {
+        this.logError('Fehler vom Content-Script:', request.error);
+      }
+    });
+
+    this.log('Background script initialisiert');
   }
-});
+};
+
+TTS_PLUGIN.init();
