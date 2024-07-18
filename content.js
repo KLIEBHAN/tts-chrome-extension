@@ -107,8 +107,14 @@ const createUIElements = () => {
     `;
     button.setAttribute('title', tooltip);
     button.addEventListener('click', onClick);
-    button.addEventListener('mouseover', () => button.style.opacity = '1');
-    button.addEventListener('mouseout', () => button.style.opacity = '0.7');
+    button.addEventListener('mouseover', () => {
+      button.style.opacity = '1';
+      showTooltip(button, tooltip);
+    });
+    button.addEventListener('mouseout', () => {
+      button.style.opacity = '0.7';
+      hideTooltip();
+    });
     return button;
   };
 
@@ -133,7 +139,7 @@ const createUIElements = () => {
   const downloadButton = createButton(
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
     downloadAudio,
-    'Download audio as MP3'  // This is the changed tooltip
+    'Download audio as MP3'
   );
   
   const closeButton = createButton(
@@ -158,8 +164,14 @@ const createUIElements = () => {
     transition: opacity 0.2s;
   `;
   volumeControl.addEventListener('input', handleVolumeChange);
-  volumeControl.addEventListener('mouseover', () => volumeControl.style.opacity = '1');
-  volumeControl.addEventListener('mouseout', () => volumeControl.style.opacity = '0.7');
+  volumeControl.addEventListener('mouseover', () => {
+    volumeControl.style.opacity = '1';
+    showTooltip(volumeControl, 'Adjust volume');
+  });
+  volumeControl.addEventListener('mouseout', () => {
+    volumeControl.style.opacity = '0.7';
+    hideTooltip();
+  });
 
   // Style the volume control thumb and track
   const thumbStyle = `
@@ -214,6 +226,38 @@ const createUIElements = () => {
   document.body.appendChild(progressContainer);
 };
 
+// Add these new functions for tooltip handling
+let tooltipElement = null;
+
+const showTooltip = (element, text) => {
+  if (tooltipElement) {
+    hideTooltip();
+  }
+  tooltipElement = document.createElement('div');
+  tooltipElement.textContent = text;
+  tooltipElement.style.cssText = `
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    z-index: 10002;
+    pointer-events: none;
+  `;
+  element.appendChild(tooltipElement);
+};
+
+const hideTooltip = () => {
+  if (tooltipElement && tooltipElement.parentNode) {
+    tooltipElement.parentNode.removeChild(tooltipElement);
+  }
+  tooltipElement = null;
+};
 
 const handleVolumeChange = (event) => {
   const volume = parseFloat(event.target.value);
