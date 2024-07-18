@@ -105,11 +105,6 @@ const TTS_PLUGIN = {
       try {
         const audioData = await this.fetchAudioFromOpenAI(chunk, apiKey);
         await this.sendAudioToContentScript(tabId, audioData, i === chunks.length - 1);
-        
-        // Warte ein wenig länger zwischen den Chunks
-        if (i < chunks.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
       } catch (error) {
         this.logError('Fehler beim Verarbeiten des Chunks:', error);
         this.showError(tabId, `Fehler beim Verarbeiten des Textes: ${error.message}`);
