@@ -133,7 +133,7 @@ const createUIElements = () => {
   const downloadButton = createButton(
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
     downloadAudio,
-    'Download audio'
+    'Download audio as MP3'  // This is the changed tooltip
   );
   
   const closeButton = createButton(
@@ -423,80 +423,101 @@ const closePlayer = () => {
   resetPlaybackPosition(); // Reset position when closing the player
 };
 
-// Audio download function
-const downloadAudio = () => {
+
+// Helper function to convert AudioBuffer to MP3
+const audioBufferToMp3 = (buffer) => {
+  const channels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const bitRate = 128;
+  
+  // Create the MP3 encoder
+  const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitRate);
+  
+  const mp3Data = [];
+  const sampleBlockSize = 1152; // This is a fixed value for MP3 encoding
+  
+  // Convert the float32 array to int16 array
+  const convertBuffer = (arrayBuffer) => {
+    const int16Buffer = new Int16Array(arrayBuffer.length);
+    for (let i = 0; i < arrayBuffer.length; i++) {
+      int16Buffer[i] = arrayBuffer[i] < 0 ? arrayBuffer[i] * 0x8000 : arrayBuffer[i] * 0x7FFF;
+    }
+    return int16Buffer;
+  };
+  
+  const left = convertBuffer(buffer.getChannelData(0));
+  const right = channels > 1 ? convertBuffer(buffer.getChannelData(1)) : left;
+  
+  for (let i = 0; i < buffer.length; i += sampleBlockSize) {
+    const leftChunk = left.subarray(i, i + sampleBlockSize);
+    const rightChunk = right.subarray(i, i + sampleBlockSize);
+    const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+    if (mp3buf.length > 0) {
+      mp3Data.push(mp3buf);
+    }
+  }
+  
+  // Finalize the encoding
+  const mp3buf = mp3encoder.flush();
+  if (mp3buf.length > 0) {
+    mp3Data.push(mp3buf);
+  }
+  
+  // Combine the encoded buffers into a single Uint8Array
+  const totalLength = mp3Data.reduce((acc, buf) => acc + buf.length, 0);
+  const mp3Output = new Uint8Array(totalLength);
+  let offset = 0;
+  for (let buf of mp3Data) {
+    mp3Output.set(buf, offset);
+    offset += buf.length;
+  }
+  
+  return new Blob([mp3Output], { type: 'audio/mp3' });
+};
+
+// Update the downloadAudio function to include error logging
+const downloadAudio = async () => {
   if (!audioBuffer) return;
 
-  const offlineContext = new OfflineAudioContext(
-    audioBuffer.numberOfChannels,
-    audioBuffer.length,
-    audioBuffer.sampleRate
-  );
+  try {
+    const offlineContext = new OfflineAudioContext(
+      audioBuffer.numberOfChannels,
+      audioBuffer.length,
+      audioBuffer.sampleRate
+    );
 
-  const source = offlineContext.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(offlineContext.destination);
-  source.start();
+    const source = offlineContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineContext.destination);
+    source.start();
 
-  offlineContext.startRendering().then((renderedBuffer) => {
-    const wavBlob = audioBufferToWav(renderedBuffer);
-    const url = URL.createObjectURL(wavBlob);
+    const renderedBuffer = await offlineContext.startRendering();
+    console.log('AudioBuffer details:', {
+      numberOfChannels: renderedBuffer.numberOfChannels,
+      length: renderedBuffer.length,
+      sampleRate: renderedBuffer.sampleRate,
+      duration: renderedBuffer.duration
+    });
+
+    const mp3Blob = audioBufferToMp3(renderedBuffer);
+    console.log('MP3 Blob size:', mp3Blob.size);
+
+    const url = URL.createObjectURL(mp3Blob);
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
-    a.download = 'tts_audio.wav';
+    a.download = 'tts_audio.mp3';
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     }, 100);
-  });
-};
-
-// Helper function to convert AudioBuffer to WAV
-const audioBufferToWav = (buffer) => {
-  const numberOfChannels = buffer.numberOfChannels;
-  const sampleRate = buffer.sampleRate;
-  const length = buffer.length * numberOfChannels * 2;
-  const arrayBuffer = new ArrayBuffer(44 + length);
-  const view = new DataView(arrayBuffer);
-
-  // Write WAV header
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + length, true);
-  writeString(view, 8, 'WAVE');
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numberOfChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numberOfChannels * 2, true);
-  view.setUint16(32, numberOfChannels * 2, true);
-  view.setUint16(34, 16, true);
-  writeString(view, 36, 'data');
-  view.setUint32(40, length, true);
-
-  // Write audio data
-  const offset = 44;
-  for (let i = 0; i < buffer.numberOfChannels; i++) {
-    const channelData = buffer.getChannelData(i);
-    for (let j = 0; j < channelData.length; j++) {
-      const index = offset + (j * numberOfChannels + i) * 2;
-      const sample = Math.max(-1, Math.min(1, channelData[j]));
-      view.setInt16(index, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-    }
-  }
-
-  return new Blob([view], { type: 'audio/wav' });
-};
-
-const writeString = (view, offset, string) => {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
+  } catch (error) {
+    console.error('Error during audio download:', error);
+    showError('Failed to download audio. Please try again.');
   }
 };
-
 // Error display
 const showError = (message) => {
   logError('Error:', message);
