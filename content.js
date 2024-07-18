@@ -141,6 +141,15 @@ const handleProgressBarClick = (event) => {
 const decodeAudioData = async (audioData) => {
   const arrayBuffer = new Uint8Array(audioData).buffer;
   audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  resetPlaybackPosition(); // Reset position when loading new audio
+};
+
+const resetPlaybackPosition = () => {
+  pausedAt = 0;
+  startTime = 0;
+  if (progressBar) {
+    updateProgressBar(0);
+  }
 };
 
 const stopAudio = () => {
@@ -240,7 +249,8 @@ const togglePlayPause = async () => {
 const closePlayer = () => {
   stopAudio();
   removeUIElements();
-  audioBuffer = null;  // Reset the audioBuffer
+  audioBuffer = null;
+  resetPlaybackPosition(); // Reset position when closing the player
 };
 
 // Audio download function
