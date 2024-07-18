@@ -32,6 +32,8 @@ const initAudioContext = async () => {
   }
 };
 
+let timeDisplay = null;
+
 // UI creation and management
 const createUIElements = () => {
   progressContainer = document.createElement('div');
@@ -53,6 +55,7 @@ const createUIElements = () => {
     height: 5px;
     background-color: rgba(255, 255, 255, 0.3);
     margin-left: 10px;
+    margin-right: 10px;
     cursor: pointer;
   `;
 
@@ -67,7 +70,16 @@ const createUIElements = () => {
   progressBarContainer.appendChild(progressBar);
   progressBarContainer.addEventListener('click', handleProgressBarClick);
 
-  const createButton = (svgPath, onClick) => {
+  timeDisplay = document.createElement('div');
+  timeDisplay.style.cssText = `
+    color: white;
+    font-size: 12px;
+    margin-right: 10px;
+    font-family: Arial, sans-serif;
+  `;
+  timeDisplay.textContent = '0:00 / 0:00';
+
+  const createButton = (svgPath, onClick, tooltip) => {
     const button = document.createElement('button');
     button.innerHTML = svgPath;
     button.style.cssText = `
@@ -82,7 +94,9 @@ const createUIElements = () => {
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
     `;
+    button.setAttribute('title', tooltip);
     button.addEventListener('click', onClick);
     button.addEventListener('mouseover', () => button.style.opacity = '1');
     button.addEventListener('mouseout', () => button.style.opacity = '0.7');
@@ -91,37 +105,50 @@ const createUIElements = () => {
 
   const skipBackButton = createButton(
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>',
-    () => skipAudio(-5)
+    () => skipAudio(-5),
+    'Skip backward (5 seconds)'
   );
   
   const skipForwardButton = createButton(
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>',
-    () => skipAudio(5)
+    () => skipAudio(5),
+    'Skip forward (5 seconds)'
   );
   
   pauseButton = createButton(
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>',
-    togglePlayPause
+    togglePlayPause,
+    'Play/Pause'
   );
   
   const downloadButton = createButton(
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
-    downloadAudio
+    downloadAudio,
+    'Download audio'
   );
   
   const closeButton = createButton(
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
-    closePlayer
+    closePlayer,
+    'Close player'
   );
 
-  progressContainer.appendChild(progressBarContainer);
   progressContainer.appendChild(skipBackButton);
   progressContainer.appendChild(pauseButton);
   progressContainer.appendChild(skipForwardButton);
+  progressContainer.appendChild(progressBarContainer);
+  progressContainer.appendChild(timeDisplay);
   progressContainer.appendChild(downloadButton);
   progressContainer.appendChild(closeButton);
   document.body.appendChild(progressContainer);
 };
+
+const formatTime = (seconds) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
+
 
 const updateProgressBar = (progress) => {
   if (!progressBar) {
@@ -249,8 +276,13 @@ const updateProgress = () => {
     const currentTime = pausedAt + (isPlaying ? audioContext.currentTime - startTime : 0);
     const progress = (currentTime / audioBuffer.duration) * 100;
     updateProgressBar(progress);
+    
+    if (timeDisplay) {
+      timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(audioBuffer.duration)}`;
+    }
+    
     if (currentTime >= audioBuffer.duration) {
-      pauseAudio(); // Pause playback at the end instead of stopping
+      pauseAudio();
       updatePauseButton();
     }
   }, 100);
