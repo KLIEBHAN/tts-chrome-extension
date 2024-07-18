@@ -67,14 +67,13 @@ const createUIElements = () => {
   progressBarContainer.appendChild(progressBar);
   progressBarContainer.addEventListener('click', handleProgressBarClick);
 
-  const createButton = (text, onClick) => {
+  const createButton = (svgPath, onClick) => {
     const button = document.createElement('button');
-    button.textContent = text;
+    button.innerHTML = svgPath;
     button.style.cssText = `
       background: none;
       border: none;
       color: white;
-      font-size: 20px;
       cursor: pointer;
       padding: 0 10px;
       opacity: 0.7;
@@ -90,11 +89,30 @@ const createUIElements = () => {
     return button;
   };
 
-  const skipBackButton = createButton('⏪', () => skipAudio(-5));
-  const skipForwardButton = createButton('⏩', () => skipAudio(5));
-  pauseButton = createButton('❚❚', togglePlayPause);
-  const downloadButton = createButton('⬇️', downloadAudio);
-  const closeButton = createButton('✖️', closePlayer);
+  const skipBackButton = createButton(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>',
+    () => skipAudio(-5)
+  );
+  
+  const skipForwardButton = createButton(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>',
+    () => skipAudio(5)
+  );
+  
+  pauseButton = createButton(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>',
+    togglePlayPause
+  );
+  
+  const downloadButton = createButton(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+    downloadAudio
+  );
+  
+  const closeButton = createButton(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+    closePlayer
+  );
 
   progressContainer.appendChild(progressBarContainer);
   progressContainer.appendChild(skipBackButton);
@@ -114,7 +132,9 @@ const updateProgressBar = (progress) => {
 
 const updatePauseButton = () => {
   if (pauseButton) {
-    pauseButton.textContent = isPlaying ? '❚❚' : '▶';
+    const playIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+    const pauseIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>';
+    pauseButton.innerHTML = isPlaying ? pauseIcon : playIcon;
   }
 };
 
