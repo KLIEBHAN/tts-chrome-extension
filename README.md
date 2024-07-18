@@ -1,24 +1,26 @@
-# Chrome TTS Plugin with OpenAI API
+# Text-to-Speech Chrome Extension
 
-## Overview
-
-This Chrome plugin allows users to have selected text on web pages read aloud using the OpenAI Text-to-Speech (TTS) API. It provides a convenient way to convert text content into natural-sounding speech.
+This Chrome extension allows you to listen to selected text on web pages using OpenAI's Text-to-Speech API. With a user-friendly interface and advanced control features, it provides an enhanced listening experience right in your browser.
 
 ## Features
 
-- Select any text on a webpage and have it read aloud.
+- **Text-to-Speech Conversion**: Select any text on a webpage and have it read aloud.
 - Uses the high-quality OpenAI TTS API for natural speech output.
-- Easy integration with Chrome's context menu.
-- Support for various voices (alloy, echo, fable, onyx, nova, shimmer).
+- **Easy-to-Use**: Simply select text and use the context menu to start listening.
+- **Advanced Audio Controls**: 
+  - Play/Pause functionality
+  - Skip forward and backward by 5 seconds
+  - Clickable progress bar for precise navigation
+- **Visual Progress Indicator**: See the progress of audio playback in real-time.
+- **Multiple Voices**: Choose from various available voices (alloy, echo, fable, onyx, nova, shimmer).
 - Efficient processing of text of any length in a single API call.
 
 ## Installation
 
 1. Download the plugin source code or clone the repository.
-2. Open Google Chrome and navigate to `chrome://extensions`.
+2. Open Chrome and navigate to `chrome://extensions/`.
 3. Enable "Developer mode" in the top right corner.
-4. Click on "Load unpacked extension".
-5. Select the folder containing the plugin source code.
+4. Click "Load unpacked" and select the folder containing the extension files.
 
 ## Configuration
 
@@ -31,10 +33,13 @@ Before you can use the plugin, you need to set up a valid OpenAI API key:
 
 ## Usage
 
-1. Select the text on a webpage that you want to have read aloud.
-2. Right-click on the selected text.
-3. Choose "Read Aloud" from the context menu.
-4. The selected text will now be read aloud using the chosen voice.
+1. Highlight the text you want to be read aloud.
+2. Right-click and select "Read Aloud" from the context menu.
+3. The selected text will now be read aloud using the chosen voice.
+4. Use the controls at the top of the screen:
+   - Play/Pause button to start and pause playback
+   - Arrows to skip forward or backward by 10 seconds
+   - Click on the progress bar to jump to a specific point
 
 ## Technical Details
 
@@ -50,17 +55,19 @@ Before you can use the plugin, you need to set up a valid OpenAI API key:
 - `content.js`: Interacts with the webpage, handles text selection and audio playback
 - `popup.html` and `popup.js`: User interface and logic for plugin settings
 
+## Privacy
+
+This extension sends the selected text to the OpenAI API for processing. Please ensure you don't have the extension read aloud any sensitive or personal information without proper consideration.
+
 ## Troubleshooting
 
-- Make sure you've entered a valid OpenAI API key.
+If you encounter issues, try the following:
+- Verify that your API key is entered correctly.
+- - Make sure you've entered a valid OpenAI API key.
 - Check the console in the developer tools for error messages if the plugin isn't working as expected.
 - If you experience issues with audio playback, try reloading the page and attempting again.
-
-## Privacy and Security
-
-- Your OpenAI API key is stored locally in your browser and is not shared with any third parties.
-- The text to be processed is only sent to the OpenAI API and is not stored anywhere else.
-- Audio data is processed directly in the browser and is not persistently stored.
+- Refresh the page and try again.
+- Disable and re-enable the extension in `chrome://extensions/`.
 
 ## Contributing
 
@@ -72,4 +79,4 @@ Contributions to the project are welcome! Please create an issue or a pull reque
 
 ---
 
-Developed with ❤️ and OpenAI's TTS API
+Developed with ❤️ for a better web experience.
