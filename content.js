@@ -11,7 +11,7 @@ const logError = (message, ...args) => {
   chrome.runtime.sendMessage({action: "logError", error: message});
 };
 
-// Audio context management
+// Audio context and state management
 let audioContext = null;
 let source = null;
 let startTime = 0;
@@ -19,18 +19,20 @@ let pausedAt = 0;
 let isPlaying = false;
 let audioBuffer = null;
 
-const initAudioContext = async () => {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  }
-};
-
 // UI elements
 let progressContainer = null;
 let progressBar = null;
 let pauseButton = null;
 let progressInterval = null;
 
+// Audio context initialization
+const initAudioContext = async () => {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+};
+
+// UI creation and management
 const createUIElements = () => {
   progressContainer = document.createElement('div');
   progressContainer.style.cssText = `
@@ -91,11 +93,13 @@ const createUIElements = () => {
   const skipBackButton = createButton('⏪', () => skipAudio(-5));
   const skipForwardButton = createButton('⏩', () => skipAudio(5));
   pauseButton = createButton('❚❚', togglePlayPause);
+  const downloadButton = createButton('⬇️', downloadAudio);
 
   progressContainer.appendChild(progressBarContainer);
   progressContainer.appendChild(skipBackButton);
   progressContainer.appendChild(pauseButton);
   progressContainer.appendChild(skipForwardButton);
+  progressContainer.appendChild(downloadButton);
   document.body.appendChild(progressContainer);
 };
 
@@ -131,7 +135,7 @@ const handleProgressBarClick = (event) => {
   seekAudio(newTime);
 };
 
-// Audio playback
+// Audio playback functions
 const decodeAudioData = async (audioData) => {
   const arrayBuffer = new Uint8Array(audioData).buffer;
   audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
@@ -195,8 +199,8 @@ const updateProgress = () => {
     const progress = (currentTime / audioBuffer.duration) * 100;
     updateProgressBar(progress);
     if (currentTime >= audioBuffer.duration) {
-      stopAudio();
-      removeUIElements();
+      pauseAudio(); // Pause playback at the end instead of stopping
+      updatePauseButton();
     }
   }, 100);
 };
@@ -208,6 +212,80 @@ const togglePlayPause = async () => {
     pauseAudio();
   } else {
     playAudio();
+  }
+};
+
+// Audio download function
+const downloadAudio = () => {
+  if (!audioBuffer) return;
+
+  const offlineContext = new OfflineAudioContext(
+    audioBuffer.numberOfChannels,
+    audioBuffer.length,
+    audioBuffer.sampleRate
+  );
+
+  const source = offlineContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(offlineContext.destination);
+  source.start();
+
+  offlineContext.startRendering().then((renderedBuffer) => {
+    const wavBlob = audioBufferToWav(renderedBuffer);
+    const url = URL.createObjectURL(wavBlob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = 'tts_audio.wav';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+  });
+};
+
+// Helper function to convert AudioBuffer to WAV
+const audioBufferToWav = (buffer) => {
+  const numberOfChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const length = buffer.length * numberOfChannels * 2;
+  const arrayBuffer = new ArrayBuffer(44 + length);
+  const view = new DataView(arrayBuffer);
+
+  // Write WAV header
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + length, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numberOfChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+  view.setUint16(32, numberOfChannels * 2, true);
+  view.setUint16(34, 16, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, length, true);
+
+  // Write audio data
+  const offset = 44;
+  for (let i = 0; i < buffer.numberOfChannels; i++) {
+    const channelData = buffer.getChannelData(i);
+    for (let j = 0; j < channelData.length; j++) {
+      const index = offset + (j * numberOfChannels + i) * 2;
+      const sample = Math.max(-1, Math.min(1, channelData[j]));
+      view.setInt16(index, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+    }
+  }
+
+  return new Blob([view], { type: 'audio/wav' });
+};
+
+const writeString = (view, offset, string) => {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
   }
 };
 
@@ -275,13 +353,8 @@ const handleMessage = async (request, sender, sendResponse) => {
 const init = () => {
   log('Content script loaded');
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    try {
-      handleMessage(request, sender, sendResponse);
-    } catch (error) {
-      logError('Unexpected error in message listener:', error);
-      sendResponse({success: false, error: 'Unexpected error: ' + error.message});
-    }
-    return true;
+    handleMessage(request, sender, sendResponse);
+    return true; // Indicates that the response is sent asynchronously
   });
 };
 

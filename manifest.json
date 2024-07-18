@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Text-to-Speech with OpenAI TTS",
-  "version": "2.2",
-  "description": "Reads selected text using the OpenAI Text-to-Speech API.",
+  "version": "2.3",
+  "description": "Reads selected text using the OpenAI Text-to-Speech API with enhanced playback controls and download option.",
   "permissions": [
     "activeTab",
     "storage",
-    "contextMenus"
+    "contextMenus",
+    "downloads"
   ],
   "host_permissions": [
     "https://api.openai.com/*"

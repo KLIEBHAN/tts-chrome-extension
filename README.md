@@ -13,6 +13,8 @@ This Chrome extension allows you to listen to selected text on web pages using O
   - Clickable progress bar for precise navigation
 - **Visual Progress Indicator**: See the progress of audio playback in real-time.
 - **Multiple Voices**: Choose from various available voices (alloy, echo, fable, onyx, nova, shimmer).
+- **Continuous Playback**: Audio pauses at the end instead of stopping, allowing for repeated listening.
+- **Download Option**: Save the generated audio as a WAV file for offline listening.
 - Efficient processing of text of any length in a single API call.
 
 ## Installation
@@ -38,8 +40,9 @@ Before you can use the plugin, you need to set up a valid OpenAI API key:
 3. The selected text will now be read aloud using the chosen voice.
 4. Use the controls at the top of the screen:
    - Play/Pause button to start and pause playback
-   - Arrows to skip forward or backward by 10 seconds
+   - Arrows to skip forward or backward by 5 seconds
    - Click on the progress bar to jump to a specific point
+   - Download button to save the audio as a WAV file
 
 ## Technical Details
 
@@ -63,7 +66,7 @@ This extension sends the selected text to the OpenAI API for processing. Please 
 
 If you encounter issues, try the following:
 - Verify that your API key is entered correctly.
-- - Make sure you've entered a valid OpenAI API key.
+- Make sure you've entered a valid OpenAI API key.
 - Check the console in the developer tools for error messages if the plugin isn't working as expected.
 - If you experience issues with audio playback, try reloading the page and attempting again.
 - Refresh the page and try again.
