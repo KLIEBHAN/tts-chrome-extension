@@ -16,7 +16,7 @@ This Chrome extension allows you to listen to selected text on web pages using O
 - **Time Display**: Shows current playback time and total duration.
 - **Multiple Voices**: Choose from various available voices (alloy, echo, fable, onyx, nova, shimmer).
 - **Continuous Playback**: Audio pauses at the end instead of stopping, allowing for repeated listening.
-- **Download Option**: Save the generated audio as a WAV file for offline listening.
+- **Download Option**: Save the generated audio as a MP3 file for offline listening.
 - Efficient processing of text of any length in a single API call.
 - **Tooltips**: Helpful tooltips for all control buttons.
 
@@ -54,7 +54,7 @@ Before you can use the plugin, you need to set up a valid OpenAI API key:
    - Click on the progress bar to jump to a specific point
    - Adjust volume using the volume slider
    - Click on the volume icon to mute/unmute
-   - Download button to save the audio as a WAV file
+   - Download button to save the audio as a MP3 file
    - Close button to stop playback and remove the player
 
 ## Technical Details
