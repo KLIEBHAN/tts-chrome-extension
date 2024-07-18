@@ -31,7 +31,8 @@ let volumeIcon = null;
 let isMuted = false;
 let lastVolume = 1;
 
-
+// New global variable for playback speed
+let playbackRate = 1;
 
 // Audio context initialization
 const initAudioContext = async () => {
@@ -41,7 +42,6 @@ const initAudioContext = async () => {
     gainNode.connect(audioContext.destination);
   }
 };
-
 
 // UI creation and management
 const createUIElements = () => {
@@ -214,11 +214,35 @@ const createUIElements = () => {
   );
   volumeIcon.style.cursor = 'pointer';
 
+  // Create speed control element
+  const speedControl = document.createElement('select');
+  speedControl.id = 'speed-control';
+  speedControl.style.cssText = `
+    margin-right: 10px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px;
+  `;
+  
+  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+  speeds.forEach(speed => {
+    const option = document.createElement('option');
+    option.value = speed;
+    option.textContent = `${speed}x`;
+    if (speed === 1) option.selected = true;
+    speedControl.appendChild(option);
+  });
+
+  speedControl.addEventListener('change', handleSpeedChange);
+
   progressContainer.appendChild(skipBackButton);
   progressContainer.appendChild(pauseButton);
   progressContainer.appendChild(skipForwardButton);
   progressContainer.appendChild(progressBarContainer);
   progressContainer.appendChild(timeDisplay);
+  progressContainer.appendChild(speedControl);
   progressContainer.appendChild(volumeIcon);
   progressContainer.appendChild(volumeControl);
   progressContainer.appendChild(downloadButton);
@@ -274,7 +298,6 @@ const setVolume = (volume) => {
   }
 };
 
-
 const toggleMute = () => {
   if (isMuted) {
     setVolume(lastVolume);
@@ -288,11 +311,9 @@ const toggleMute = () => {
   updateVolumeIcon(lastVolume);
 };
 
-
 const updateVolumeIcon = (volume) => {
   volumeIcon.innerHTML = getVolumeIconSVG(isMuted ? 0 : volume);
 };
-
 
 const getVolumeIconSVG = (volume) => {
   if (volume === 0) {
@@ -309,7 +330,6 @@ const formatTime = (seconds) => {
   const remainingSeconds = Math.floor(seconds % 60);
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
-
 
 const updateProgressBar = (progress) => {
   if (!progressBar) {
@@ -405,13 +425,15 @@ const skipAudio = (seconds) => {
   }
 };
 
-
 const playAudio = () => {
   if (!audioBuffer) return;
 
   source = audioContext.createBufferSource();
   source.buffer = audioBuffer;
   source.connect(gainNode);
+  
+  // Set the playback rate
+  source.playbackRate.setValueAtTime(playbackRate, audioContext.currentTime);
   
   startTime = audioContext.currentTime;
   source.start(0, pausedAt);
@@ -435,7 +457,7 @@ const pauseAudio = () => {
 const updateProgress = () => {
   clearInterval(progressInterval);
   progressInterval = setInterval(() => {
-    const currentTime = pausedAt + (isPlaying ? audioContext.currentTime - startTime : 0);
+    const currentTime = pausedAt + (isPlaying ? (audioContext.currentTime - startTime) * playbackRate : 0);
     const progress = (currentTime / audioBuffer.duration) * 100;
     updateProgressBar(progress);
     
@@ -467,6 +489,13 @@ const closePlayer = () => {
   resetPlaybackPosition(); // Reset position when closing the player
 };
 
+// New function to handle speed changes
+const handleSpeedChange = (event) => {
+  playbackRate = parseFloat(event.target.value);
+  if (source) {
+    source.playbackRate.setValueAtTime(playbackRate, audioContext.currentTime);
+  }
+};
 
 // Helper function to convert AudioBuffer to MP3
 const audioBufferToMp3 = (buffer) => {
@@ -562,6 +591,7 @@ const downloadAudio = async () => {
     showError('Failed to download audio. Please try again.');
   }
 };
+
 // Error display
 const showError = (message) => {
   logError('Error:', message);
