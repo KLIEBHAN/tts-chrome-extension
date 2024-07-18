@@ -4,6 +4,8 @@ const TTS_PLUGIN = {
   ERROR_PREFIX: '[TTS Plugin Error]',
   CONTEXT_MENU_ID: 'readSelectedText',
   CONTEXT_MENU_TITLE: 'Read Aloud',
+  CONTEXT_MENU_PAUSE_ID: 'pauseResumeReading',
+  CONTEXT_MENU_PAUSE_TITLE: 'Pause/Resume Reading',
   API_ENDPOINT: 'https://api.openai.com/v1/audio/speech',
   TTS_MODEL: 'tts-1',
   DEFAULT_VOICE: 'alloy'
@@ -20,7 +22,7 @@ const showError = (tabId, message) => {
 };
 
 // Context menu creation
-const createContextMenu = () => {
+const createContextMenus = () => {
   chrome.contextMenus.create({
     id: TTS_PLUGIN.CONTEXT_MENU_ID,
     title: TTS_PLUGIN.CONTEXT_MENU_TITLE,
@@ -30,6 +32,18 @@ const createContextMenu = () => {
       logError('Error creating context menu:', chrome.runtime.lastError);
     } else {
       log('Context menu created successfully');
+    }
+  });
+
+  chrome.contextMenus.create({
+    id: TTS_PLUGIN.CONTEXT_MENU_PAUSE_ID,
+    title: TTS_PLUGIN.CONTEXT_MENU_PAUSE_TITLE,
+    contexts: ['page']
+  }, () => {
+    if (chrome.runtime.lastError) {
+      logError('Error creating pause/resume context menu:', chrome.runtime.lastError);
+    } else {
+      log('Pause/resume context menu created successfully');
     }
   });
 };
@@ -75,61 +89,59 @@ const fetchAudioFromOpenAI = async (text, apiKey, voice) => {
     throw error;
   }
 };
-
 // Content script communication
-const sendAudioDataToContentScript = async (tabId, audioData) => {
+const sendMessageToContentScript = async (tabId, message) => {
   return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, { 
-      action: 'playAudioData', 
-      audioData: Array.from(new Uint8Array(audioData))
-    }, () => {
+    chrome.tabs.sendMessage(tabId, message, (response) => {
       if (chrome.runtime.lastError) {
-        logError('Error sending audio data:', chrome.runtime.lastError);
-        reject(chrome.runtime.lastError);
+        logError('Error sending message:', chrome.runtime.lastError);
+        reject(new Error(chrome.runtime.lastError.message));
+      } else if (response && response.success === false) {
+        logError('Error response from content script:', response.error);
+        reject(new Error(response.error));
       } else {
-        log('Audio data sent successfully');
-        resolve();
+        log('Message sent successfully');
+        resolve(response);
       }
     });
   });
 };
 
 const getSelectedText = async (tabId) => {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, { action: 'getSelectedText' }, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(`Error getting selected text: ${chrome.runtime.lastError.message}`));
-      } else if (response && response.text) {
-        log('Selected text received, length:', response.text.length);
-        resolve(response.text);
-      } else {
-        resolve(null);
-      }
-    });
-  });
+  try {
+    const response = await sendMessageToContentScript(tabId, { action: 'getSelectedText' });
+    return response.text;
+  } catch (error) {
+    logError('Error getting selected text:', error);
+    throw error;
+  }
 };
 
 // Main logic
 const handleContextMenuClick = async (info, tab) => {
   log('Context menu clicked', info, tab);
-  if (info.menuItemId === TTS_PLUGIN.CONTEXT_MENU_ID) {
-    try {
+  try {
+    if (info.menuItemId === TTS_PLUGIN.CONTEXT_MENU_ID) {
       const selectedText = await getSelectedText(tab.id);
       if (selectedText) {
         const settings = await getSettings();
         if (settings.apiKey) {
           const audioData = await fetchAudioFromOpenAI(selectedText, settings.apiKey, settings.voice);
-          await sendAudioDataToContentScript(tab.id, audioData);
+          await sendMessageToContentScript(tab.id, { action: 'playAudioData', audioData: Array.from(new Uint8Array(audioData)) });
         } else {
-          showError(tab.id, 'API key not found. Please configure it in the settings.');
+          throw new Error('API key not found. Please configure it in the settings.');
         }
       } else {
-        showError(tab.id, 'No text selected');
+        throw new Error('No text selected');
       }
-    } catch (error) {
-      logError('Error during processing:', error);
-      showError(tab.id, `Error: ${error.message}`);
+    } else if (info.menuItemId === TTS_PLUGIN.CONTEXT_MENU_PAUSE_ID) {
+      await sendMessageToContentScript(tab.id, { action: 'togglePlayPause' });
+    } else {
+      throw new Error('Unknown menu item');
     }
+  } catch (error) {
+    logError('Error during processing:', error);
+    showError(tab.id, `Error: ${error.message}`);
   }
 };
 
@@ -137,7 +149,7 @@ const handleContextMenuClick = async (info, tab) => {
 const init = () => {
   chrome.runtime.onInstalled.addListener(() => {
     log('Plugin installed or updated');
-    createContextMenu();
+    createContextMenus();
   });
 
   chrome.contextMenus.onClicked.addListener(handleContextMenuClick);

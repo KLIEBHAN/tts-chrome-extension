@@ -1,76 +1,72 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text-to-Speech with OpenAI TTS</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            width: 320px;
+            font-family: Arial, sans-serif;
+            width: 300px;
             padding: 20px;
-            background-color: #f0f4f8;
-            color: #333;
-            line-height: 1.6;
+            background-color: #f0f0f0;
         }
         h1 {
-            font-size: 20px;
-            margin-bottom: 15px;
-            color: #2c3e50;
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
             text-align: center;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
         }
         .input-group {
             margin-bottom: 15px;
         }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-            font-size: 14px;
-            transition: border-color 0.3s;
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
         }
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+        input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
         button {
             width: 100%;
             padding: 10px;
-            background-color: #3498db;
+            background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 4px;
-            font-size: 16px;
             cursor: pointer;
+            font-size: 16px;
             transition: background-color 0.3s;
         }
         button:hover {
-            background-color: #2980b9;
+            background-color: #45a049;
         }
-        p {
-            font-size: 14px;
-            color: #7f8c8d;
-            text-align: center;
-            margin-top: 15px;
-        }
-        .status {
+        #status {
             margin-top: 15px;
             padding: 10px;
             border-radius: 4px;
             text-align: center;
             display: none;
         }
-        .status.success {
-            background-color: #2ecc71;
-            color: white;
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
         }
-        .status.error {
-            background-color: #e74c3c;
-            color: white;
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        .instructions {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
         }
     </style>
 </head>
@@ -79,7 +75,7 @@
     
     <div class="input-group">
         <label for="apiKey">OpenAI API Key:</label>
-        <input type="password" id="apiKey" placeholder="Your API key">
+        <input type="text" id="apiKey" placeholder="Enter your API key">
     </div>
 
     <div class="input-group">
@@ -98,7 +94,9 @@
 
     <div id="status" class="status"></div>
 
-    <p>Select text on a webpage and choose "Read Aloud" from the context menu.</p>
+    <p class="instructions">
+        Select text on a webpage and choose "Read Aloud" from the context menu.
+    </p>
 
     <script src="popup.js"></script>
 </body>
