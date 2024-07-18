@@ -94,12 +94,14 @@ const createUIElements = () => {
   const skipForwardButton = createButton('⏩', () => skipAudio(5));
   pauseButton = createButton('❚❚', togglePlayPause);
   const downloadButton = createButton('⬇️', downloadAudio);
+  const closeButton = createButton('✖️', closePlayer);
 
   progressContainer.appendChild(progressBarContainer);
   progressContainer.appendChild(skipBackButton);
   progressContainer.appendChild(pauseButton);
   progressContainer.appendChild(skipForwardButton);
   progressContainer.appendChild(downloadButton);
+  progressContainer.appendChild(closeButton);
   document.body.appendChild(progressContainer);
 };
 
@@ -152,18 +154,38 @@ const stopAudio = () => {
 const seekAudio = (newTime) => {
   if (!audioBuffer) return;
 
-  stopAudio();
+  const wasPlaying = isPlaying;
+  if (isPlaying) {
+    stopAudio();
+  }
+
   pausedAt = Math.max(0, Math.min(newTime, audioBuffer.duration));
-  playAudio();
+  
+  if (wasPlaying) {
+    playAudio();
+  } else {
+    updateProgress();
+  }
 };
 
 const skipAudio = (seconds) => {
-  if (!audioBuffer || !isPlaying) return;
+  if (!audioBuffer) return;
   
-  const currentTime = pausedAt + (audioContext.currentTime - startTime);
+  const wasPlaying = isPlaying;
+  if (isPlaying) {
+    pauseAudio();
+  }
+  
+  const currentTime = pausedAt + (wasPlaying ? audioContext.currentTime - startTime : 0);
   const newTime = Math.max(0, Math.min(currentTime + seconds, audioBuffer.duration));
   
-  seekAudio(newTime);
+  pausedAt = newTime;
+  
+  if (wasPlaying) {
+    playAudio();
+  } else {
+    updateProgress();
+  }
 };
 
 const playAudio = () => {
@@ -195,7 +217,7 @@ const pauseAudio = () => {
 const updateProgress = () => {
   clearInterval(progressInterval);
   progressInterval = setInterval(() => {
-    const currentTime = pausedAt + (audioContext.currentTime - startTime);
+    const currentTime = pausedAt + (isPlaying ? audioContext.currentTime - startTime : 0);
     const progress = (currentTime / audioBuffer.duration) * 100;
     updateProgressBar(progress);
     if (currentTime >= audioBuffer.duration) {
@@ -213,6 +235,12 @@ const togglePlayPause = async () => {
   } else {
     playAudio();
   }
+};
+
+const closePlayer = () => {
+  stopAudio();
+  removeUIElements();
+  audioBuffer = null;  // Reset the audioBuffer
 };
 
 // Audio download function
