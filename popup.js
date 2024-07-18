@@ -1,33 +1,36 @@
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('saveKey').addEventListener('click', function() {
-    const apiKey = document.getElementById('apiKey').value;
-    chrome.storage.local.set({apiKey: apiKey}, function() {
-      if (chrome.runtime.lastError) {
-        console.error("Fehler beim Speichern des API-Schlüssels:", chrome.runtime.lastError);
-      } else {
-        console.log("API-Schlüssel gespeichert");
-        alert('API-Schlüssel gespeichert!');
+  const saveButton = document.getElementById('saveKey');
+  const apiKeyInput = document.getElementById('apiKey');
+  const statusDiv = document.getElementById('status');
+
+  // Lade gespeicherten API-Schlüssel
+  chrome.storage.local.get(['apiKey'], function(result) {
+      if (result.apiKey) {
+          apiKeyInput.value = result.apiKey;
       }
-    });
   });
 
-  // Zum Testen des Kontextmenüs
-  const testButton = document.createElement('button');
-  testButton.textContent = 'Kontextmenü testen';
-  testButton.addEventListener('click', function() {
-    chrome.contextMenus.create({
-      id: "testMenu",
-      title: "Test-Eintrag",
-      contexts: ["all"]
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.error("Fehler beim Erstellen des Test-Kontextmenüs:", chrome.runtime.lastError);
-        alert("Fehler beim Erstellen des Test-Kontextmenüs. Siehe Konsole für Details.");
+  saveButton.addEventListener('click', function() {
+      const apiKey = apiKeyInput.value.trim();
+      if (apiKey) {
+          chrome.storage.local.set({apiKey: apiKey}, function() {
+              if (chrome.runtime.lastError) {
+                  showStatus('Fehler beim Speichern des API-Schlüssels', 'error');
+              } else {
+                  showStatus('API-Schlüssel erfolgreich gespeichert', 'success');
+              }
+          });
       } else {
-        console.log("Test-Kontextmenü erfolgreich erstellt");
-        alert("Test-Kontextmenü erfolgreich erstellt. Bitte überprüfen Sie das Kontextmenü auf einer Webseite.");
+          showStatus('Bitte geben Sie einen API-Schlüssel ein', 'error');
       }
-    });
   });
-  document.body.appendChild(testButton);
+
+  function showStatus(message, type) {
+      statusDiv.textContent = message;
+      statusDiv.className = 'status ' + type;
+      statusDiv.style.display = 'block';
+      setTimeout(() => {
+          statusDiv.style.display = 'none';
+      }, 3000);
+  }
 });

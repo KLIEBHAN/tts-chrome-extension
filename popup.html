@@ -1,26 +1,87 @@
-<!doctype html>
-<html>
-  <head>
-    <title>Text Vorlesen</title>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Vorlesen mit OpenAI TTS</title>
     <style>
-      body {
-        width: 300px;
-        padding: 10px;
-      }
-      button {
-        margin-top: 10px;
-      }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 320px;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #333;
+            line-height: 1.6;
+        }
+        h1 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        p {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: center;
+            margin-top: 15px;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        .status.success {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .status.error {
+            background-color: #e74c3c;
+            color: white;
+        }
     </style>
-  </head>
-  <body>
-    <h2>Text Vorlesen mit OpenAI TTS</h2>
-    <input
-      type="text"
-      id="apiKey"
-      placeholder="OpenAI API-Schlüssel eingeben"
-    />
+</head>
+<body>
+    <h1>Text Vorlesen mit OpenAI TTS</h1>
+    <div class="input-group">
+        <input type="text" id="apiKey" placeholder="OpenAI API-Schlüssel eingeben">
+    </div>
     <button id="saveKey">API-Schlüssel speichern</button>
-    <button id="readText">Markierten Text vorlesen</button>
+    <div id="status" class="status"></div>
+    <p>Markieren Sie Text auf einer Webseite und wählen Sie "Vorlesen" aus dem Kontextmenü.</p>
     <script src="popup.js"></script>
-  </body>
+</body>
 </html>
