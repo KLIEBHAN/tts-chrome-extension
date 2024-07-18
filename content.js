@@ -1,40 +1,48 @@
-// Constants
+// Constants and Configuration
 const TTS_CONTENT = {
   LOG_PREFIX: '[TTS Plugin Content]',
   ERROR_PREFIX: '[TTS Plugin Content Error]',
 };
 
-// Utility functions
+const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const DEFAULT_PLAYBACK_SPEED = 1;
+
+// Utility Functions
 const log = (message, ...args) => console.log(`${TTS_CONTENT.LOG_PREFIX} ${message}`, ...args);
 const logError = (message, ...args) => {
   console.error(`${TTS_CONTENT.ERROR_PREFIX} ${message}`, ...args);
   chrome.runtime.sendMessage({action: "logError", error: message});
 };
 
-// Audio context and state management
+const formatTime = (seconds) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
+
+// State Management
 let audioContext = null;
 let source = null;
+let gainNode = null;
+let audioBuffer = null;
 let startTime = 0;
 let pausedAt = 0;
 let isPlaying = false;
-let audioBuffer = null;
+let isMuted = false;
+let lastVolume = 1;
+let playbackRate = DEFAULT_PLAYBACK_SPEED;
 
-// UI elements
+// UI Elements
 let progressContainer = null;
 let progressBar = null;
 let pauseButton = null;
-let progressInterval = null;
-
-let gainNode = null;
+let timeDisplay = null;
 let volumeControl = null;
 let volumeIcon = null;
-let isMuted = false;
-let lastVolume = 1;
+let progressInterval = null;
+let tooltipElement = null;
 
-// New global variable for playback speed
-let playbackRate = 1;
-
-// Audio context initialization
+// Audio Context Initialization
 const initAudioContext = async () => {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -43,7 +51,7 @@ const initAudioContext = async () => {
   }
 };
 
-// UI creation and management
+// UI Creation and Management
 const createUIElements = () => {
   progressContainer = document.createElement('div');
   progressContainer.style.cssText = `
@@ -58,35 +66,40 @@ const createUIElements = () => {
     align-items: center;
   `;
 
-  const progressBarContainer = document.createElement('div');
-  progressBarContainer.style.cssText = `
-    flex-grow: 1;
-    height: 5px;
-    background-color: rgba(255, 255, 255, 0.3);
-    margin-left: 10px;
-    margin-right: 10px;
-    cursor: pointer;
-  `;
+  const createProgressBar = () => {
+    const container = document.createElement('div');
+    container.style.cssText = `
+      flex-grow: 1;
+      height: 5px;
+      background-color: rgba(255, 255, 255, 0.3);
+      margin: 0 10px;
+      cursor: pointer;
+    `;
 
-  progressBar = document.createElement('div');
-  progressBar.style.cssText = `
-    height: 100%;
-    width: 0%;
-    background-color: rgba(76, 175, 80, 0.7);
-    transition: width 0.3s ease-out;
-  `;
+    progressBar = document.createElement('div');
+    progressBar.style.cssText = `
+      height: 100%;
+      width: 0%;
+      background-color: rgba(76, 175, 80, 0.7);
+      transition: width 0.3s ease-out;
+    `;
 
-  progressBarContainer.appendChild(progressBar);
-  progressBarContainer.addEventListener('click', handleProgressBarClick);
+    container.appendChild(progressBar);
+    container.addEventListener('click', handleProgressBarClick);
+    return container;
+  };
 
-  timeDisplay = document.createElement('div');
-  timeDisplay.style.cssText = `
-    color: white;
-    font-size: 12px;
-    margin-right: 10px;
-    font-family: Arial, sans-serif;
-  `;
-  timeDisplay.textContent = '0:00 / 0:00';
+  const createTimeDisplay = () => {
+    timeDisplay = document.createElement('div');
+    timeDisplay.style.cssText = `
+      color: white;
+      font-size: 12px;
+      margin-right: 10px;
+      font-family: Arial, sans-serif;
+    `;
+    timeDisplay.textContent = '0:00 / 0:00';
+    return timeDisplay;
+  };
 
   const createButton = (svgPath, onClick, tooltip) => {
     const button = document.createElement('button');
@@ -116,6 +129,84 @@ const createUIElements = () => {
       hideTooltip();
     });
     return button;
+  };
+
+  const createVolumeControl = () => {
+    volumeControl = document.createElement('input');
+    volumeControl.type = 'range';
+    volumeControl.min = 0;
+    volumeControl.max = 1;
+    volumeControl.step = 0.1;
+    volumeControl.value = 1;
+    volumeControl.style.cssText = `
+      width: 80px;
+      margin-right: 10px;
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.3);
+      outline: none;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    `;
+    volumeControl.addEventListener('input', handleVolumeChange);
+    volumeControl.addEventListener('mouseover', () => {
+      volumeControl.style.opacity = '1';
+      showTooltip(volumeControl, 'Adjust volume');
+    });
+    volumeControl.addEventListener('mouseout', () => {
+      volumeControl.style.opacity = '0.7';
+      hideTooltip();
+    });
+
+    const thumbStyle = `
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+    `;
+
+    const trackStyle = `
+      width: 100%;
+      height: 5px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 5px;
+    `;
+
+    volumeControl.style.cssText += `
+      &::-webkit-slider-thumb { ${thumbStyle} }
+      &::-moz-range-thumb { ${thumbStyle} }
+      &::-webkit-slider-runnable-track { ${trackStyle} }
+      &::-moz-range-track { ${trackStyle} }
+    `;
+
+    return volumeControl;
+  };
+
+  const createSpeedControl = () => {
+    const speedControl = document.createElement('select');
+    speedControl.id = 'speed-control';
+    speedControl.style.cssText = `
+      margin-right: 10px;
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 5px;
+    `;
+    
+    PLAYBACK_SPEEDS.forEach(speed => {
+      const option = document.createElement('option');
+      option.value = speed;
+      option.textContent = `${speed}x`;
+      if (speed === DEFAULT_PLAYBACK_SPEED) option.selected = true;
+      speedControl.appendChild(option);
+    });
+
+    speedControl.addEventListener('change', handleSpeedChange);
+    return speedControl;
   };
 
   const skipBackButton = createButton(
@@ -148,65 +239,6 @@ const createUIElements = () => {
     'Close player'
   );
 
-  volumeControl = document.createElement('input');
-  volumeControl.type = 'range';
-  volumeControl.min = 0;
-  volumeControl.max = 1;
-  volumeControl.step = 0.1;
-  volumeControl.value = 1;
-  volumeControl.style.cssText = `
-    width: 80px;
-    margin-right: 10px;
-    -webkit-appearance: none;
-    background: rgba(255, 255, 255, 0.3);
-    outline: none;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-  `;
-  volumeControl.addEventListener('input', handleVolumeChange);
-  volumeControl.addEventListener('mouseover', () => {
-    volumeControl.style.opacity = '1';
-    showTooltip(volumeControl, 'Adjust volume');
-  });
-  volumeControl.addEventListener('mouseout', () => {
-    volumeControl.style.opacity = '0.7';
-    hideTooltip();
-  });
-
-  // Style the volume control thumb and track
-  const thumbStyle = `
-    -webkit-appearance: none;
-    appearance: none;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: white;
-    cursor: pointer;
-  `;
-
-  const trackStyle = `
-    width: 100%;
-    height: 5px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 5px;
-  `;
-
-  volumeControl.style.cssText += `
-    &::-webkit-slider-thumb {
-      ${thumbStyle}
-    }
-    &::-moz-range-thumb {
-      ${thumbStyle}
-    }
-    &::-webkit-slider-runnable-track {
-      ${trackStyle}
-    }
-    &::-moz-range-track {
-      ${trackStyle}
-    }
-  `;
-
   volumeIcon = createButton(
     getVolumeIconSVG(1),
     toggleMute,
@@ -214,44 +246,18 @@ const createUIElements = () => {
   );
   volumeIcon.style.cursor = 'pointer';
 
-  // Create speed control element
-  const speedControl = document.createElement('select');
-  speedControl.id = 'speed-control';
-  speedControl.style.cssText = `
-    margin-right: 10px;
-    background-color: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 5px;
-  `;
-  
-  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-  speeds.forEach(speed => {
-    const option = document.createElement('option');
-    option.value = speed;
-    option.textContent = `${speed}x`;
-    if (speed === 1) option.selected = true;
-    speedControl.appendChild(option);
-  });
-
-  speedControl.addEventListener('change', handleSpeedChange);
-
   progressContainer.appendChild(skipBackButton);
   progressContainer.appendChild(pauseButton);
   progressContainer.appendChild(skipForwardButton);
-  progressContainer.appendChild(progressBarContainer);
-  progressContainer.appendChild(timeDisplay);
-  progressContainer.appendChild(speedControl);
+  progressContainer.appendChild(createProgressBar());
+  progressContainer.appendChild(createTimeDisplay());
+  progressContainer.appendChild(createSpeedControl());
   progressContainer.appendChild(volumeIcon);
-  progressContainer.appendChild(volumeControl);
+  progressContainer.appendChild(createVolumeControl());
   progressContainer.appendChild(downloadButton);
   progressContainer.appendChild(closeButton);
   document.body.appendChild(progressContainer);
 };
-
-// Add these new functions for tooltip handling
-let tooltipElement = null;
 
 const showTooltip = (element, text) => {
   if (tooltipElement) {
@@ -325,12 +331,6 @@ const getVolumeIconSVG = (volume) => {
   }
 };
 
-const formatTime = (seconds) => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
-
 const updateProgressBar = (progress) => {
   if (!progressBar) {
     createUIElements();
@@ -365,11 +365,11 @@ const handleProgressBarClick = (event) => {
   seekAudio(newTime);
 };
 
-// Audio playback functions
+// Audio Playback Functions
 const decodeAudioData = async (audioData) => {
   const arrayBuffer = new Uint8Array(audioData).buffer;
   audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  resetPlaybackPosition(); // Reset position when loading new audio
+  resetPlaybackPosition();
 };
 
 const resetPlaybackPosition = () => {
@@ -432,7 +432,6 @@ const playAudio = () => {
   source.buffer = audioBuffer;
   source.connect(gainNode);
   
-  // Set the playback rate
   source.playbackRate.setValueAtTime(playbackRate, audioContext.currentTime);
   
   startTime = audioContext.currentTime;
@@ -486,10 +485,9 @@ const closePlayer = () => {
   stopAudio();
   removeUIElements();
   audioBuffer = null;
-  resetPlaybackPosition(); // Reset position when closing the player
+  resetPlaybackPosition();
 };
 
-// New function to handle speed changes
 const handleSpeedChange = (event) => {
   playbackRate = parseFloat(event.target.value);
   if (source) {
@@ -497,19 +495,17 @@ const handleSpeedChange = (event) => {
   }
 };
 
-// Helper function to convert AudioBuffer to MP3
+// Audio Download Function
 const audioBufferToMp3 = (buffer) => {
   const channels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
   const bitRate = 128;
   
-  // Create the MP3 encoder
   const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitRate);
   
   const mp3Data = [];
-  const sampleBlockSize = 1152; // This is a fixed value for MP3 encoding
+  const sampleBlockSize = 1152;
   
-  // Convert the float32 array to int16 array
   const convertBuffer = (arrayBuffer) => {
     const int16Buffer = new Int16Array(arrayBuffer.length);
     for (let i = 0; i < arrayBuffer.length; i++) {
@@ -530,13 +526,11 @@ const audioBufferToMp3 = (buffer) => {
     }
   }
   
-  // Finalize the encoding
   const mp3buf = mp3encoder.flush();
   if (mp3buf.length > 0) {
     mp3Data.push(mp3buf);
   }
   
-  // Combine the encoded buffers into a single Uint8Array
   const totalLength = mp3Data.reduce((acc, buf) => acc + buf.length, 0);
   const mp3Output = new Uint8Array(totalLength);
   let offset = 0;
@@ -548,7 +542,6 @@ const audioBufferToMp3 = (buffer) => {
   return new Blob([mp3Output], { type: 'audio/mp3' });
 };
 
-// Update the downloadAudio function to include error logging
 const downloadAudio = async () => {
   if (!audioBuffer) return;
 
@@ -565,7 +558,7 @@ const downloadAudio = async () => {
     source.start();
 
     const renderedBuffer = await offlineContext.startRendering();
-    console.log('AudioBuffer details:', {
+    log('AudioBuffer details:', {
       numberOfChannels: renderedBuffer.numberOfChannels,
       length: renderedBuffer.length,
       sampleRate: renderedBuffer.sampleRate,
@@ -573,7 +566,7 @@ const downloadAudio = async () => {
     });
 
     const mp3Blob = audioBufferToMp3(renderedBuffer);
-    console.log('MP3 Blob size:', mp3Blob.size);
+    log('MP3 Blob size:', mp3Blob.size);
 
     const url = URL.createObjectURL(mp3Blob);
     const a = document.createElement('a');
@@ -587,12 +580,12 @@ const downloadAudio = async () => {
       window.URL.revokeObjectURL(url);
     }, 100);
   } catch (error) {
-    console.error('Error during audio download:', error);
+    logError('Error during audio download:', error);
     showError('Failed to download audio. Please try again.');
   }
 };
 
-// Error display
+// Error Handling
 const showError = (message) => {
   logError('Error:', message);
   let errorDiv = document.getElementById('tts-error-message');
@@ -619,7 +612,7 @@ const showError = (message) => {
   }, 5000);
 };
 
-// Message handling
+// Message Handling
 const handleMessage = async (request, sender, sendResponse) => {
   log('Message received:', request);
   try {
