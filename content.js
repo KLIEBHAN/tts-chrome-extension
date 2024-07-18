@@ -27,29 +27,34 @@ const TTS_CONTENT = {
     
     const {data: audioData, isLastChunk} = this.audioQueue.shift();
     this.log('Spiele nächstes Audio ab, verbleibende Elemente:', this.audioQueue.length);
-    this.currentAudio = new Audio("data:audio/mp3;base64," + audioData);
     
-    this.currentAudio.onended = () => {
-      this.log('Audio-Wiedergabe beendet');
-      this.currentAudio = null;
-      if (this.audioQueue.length > 0) {
-        this.playNextAudio();
-      }
-    };
-    
-    this.currentAudio.onerror = (error) => {
-      this.logError('Fehler beim Abspielen des Audios:', error);
-      this.showError("Fehler beim Abspielen des Audios: " + error.message);
-      this.currentAudio = null;
-      this.playNextAudio();
-    };
-    
-    this.currentAudio.play().catch(error => {
-      this.logError('Fehler beim Starten des Audios:', error);
-      this.showError("Fehler beim Starten des Audios: " + error.message);
-      this.currentAudio = null;
-      this.playNextAudio();
-    });
+    try {
+      this.currentAudio = new Audio("data:audio/mp3;base64," + audioData);
+      
+      this.currentAudio.onended = () => {
+        this.log('Audio-Wiedergabe beendet');
+        this.currentAudio = null;
+        setTimeout(() => this.playNextAudio(), 50); // Kurze Verzögerung vor dem nächsten Audio
+      };
+      
+      this.currentAudio.onerror = (error) => {
+        this.logError('Fehler beim Abspielen des Audios:', error);
+        this.showError("Fehler beim Abspielen des Audios: " + error.message);
+        this.currentAudio = null;
+        setTimeout(() => this.playNextAudio(), 50);
+      };
+      
+      this.currentAudio.play().catch(error => {
+        this.logError('Fehler beim Starten des Audios:', error);
+        this.showError("Fehler beim Starten des Audios: " + error.message);
+        this.currentAudio = null;
+        setTimeout(() => this.playNextAudio(), 50);
+      });
+    } catch (error) {
+      this.logError('Fehler beim Erstellen des Audio-Objekts:', error);
+      this.showError("Fehler beim Erstellen des Audio-Objekts: " + error.message);
+      setTimeout(() => this.playNextAudio(), 50);
+    }
   },
 
   showError(message) {
@@ -90,7 +95,7 @@ const TTS_CONTENT = {
         case 'playAudio':
           this.audioQueue.push({data: request.audioData, isLastChunk: request.isLastChunk});
           if (!this.currentAudio) {
-            this.playNextAudio();
+            setTimeout(() => this.playNextAudio(), 50);
           }
           sendResponse({success: true});
           break;

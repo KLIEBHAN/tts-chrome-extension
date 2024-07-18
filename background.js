@@ -70,16 +70,16 @@ const TTS_PLUGIN = {
   },
 
   splitTextIntoChunks(text) {
-    const words = text.split(/\s+/);
+    const sentences = text.match(/[^.!?]+[.!?]+|\S+/g) || [];
     const chunks = [];
     let currentChunk = '';
 
-    for (const word of words) {
-      if ((currentChunk + word).length <= this.MAX_CHUNK_LENGTH) {
-        currentChunk += (currentChunk ? ' ' : '') + word;
+    for (const sentence of sentences) {
+      if ((currentChunk + sentence).length <= this.MAX_CHUNK_LENGTH) {
+        currentChunk += (currentChunk ? ' ' : '') + sentence;
       } else {
         if (currentChunk) chunks.push(currentChunk.trim());
-        currentChunk = word;
+        currentChunk = sentence;
       }
     }
 
@@ -96,7 +96,7 @@ const TTS_PLUGIN = {
         await this.sendAudioToContentScript(tabId, audioData, i === chunks.length - 1);
         
         if (i < chunks.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 10)); // 10ms Pause zwischen Chunks
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms Pause zwischen Chunks
         }
       } catch (error) {
         this.logError('Fehler beim Verarbeiten des Chunks:', error);
