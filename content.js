@@ -2,8 +2,7 @@ const TTS_CONTENT = {
   LOG_PREFIX: '[TTS Plugin Content]',
   ERROR_PREFIX: '[TTS Plugin Content Error]',
 
-  audioQueue: [],
-  currentAudio: null,
+  audioContext: null,
 
   log(message, ...args) {
     console.log(`${this.LOG_PREFIX} ${message}`, ...args);
@@ -14,46 +13,29 @@ const TTS_CONTENT = {
     chrome.runtime.sendMessage({action: "logError", error: message});
   },
 
-  getSelectedText() {
-    return window.getSelection().toString().trim();
+  async initAudioContext() {
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
   },
 
-  playNextAudio() {
-    if (this.audioQueue.length === 0) {
-      this.log('Audio-Warteschlange leer');
-      this.currentAudio = null;
-      return;
-    }
-    
-    const {data: audioData, isLastChunk} = this.audioQueue.shift();
-    this.log('Spiele nächstes Audio ab, verbleibende Elemente:', this.audioQueue.length);
+  async playAudioData(audioData) {
+    await this.initAudioContext();
     
     try {
-      this.currentAudio = new Audio("data:audio/mp3;base64," + audioData);
+      const arrayBuffer = new Uint8Array(audioData).buffer;
+      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      const source = this.audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(this.audioContext.destination);
+      source.start(0);
       
-      this.currentAudio.onended = () => {
-        this.log('Audio-Wiedergabe beendet');
-        this.currentAudio = null;
-        setTimeout(() => this.playNextAudio(), 50); // Kurze Verzögerung vor dem nächsten Audio
-      };
-      
-      this.currentAudio.onerror = (error) => {
-        this.logError('Fehler beim Abspielen des Audios:', error);
-        this.showError("Fehler beim Abspielen des Audios: " + error.message);
-        this.currentAudio = null;
-        setTimeout(() => this.playNextAudio(), 50);
-      };
-      
-      this.currentAudio.play().catch(error => {
-        this.logError('Fehler beim Starten des Audios:', error);
-        this.showError("Fehler beim Starten des Audios: " + error.message);
-        this.currentAudio = null;
-        setTimeout(() => this.playNextAudio(), 50);
+      return new Promise(resolve => {
+        source.onended = resolve;
       });
     } catch (error) {
-      this.logError('Fehler beim Erstellen des Audio-Objekts:', error);
-      this.showError("Fehler beim Erstellen des Audio-Objekts: " + error.message);
-      setTimeout(() => this.playNextAudio(), 50);
+      this.logError('Fehler beim Abspielen der Audio-Daten:', error);
+      this.showError("Fehler beim Abspielen des Audios: " + error.message);
     }
   },
 
@@ -85,33 +67,31 @@ const TTS_CONTENT = {
 
   handleMessage(request, sender, sendResponse) {
     this.log('Nachricht empfangen:', request);
-    try {
-      switch (request.action) {
-        case 'getSelectedText':
-          const selectedText = this.getSelectedText();
-          this.log('Ausgewählter Text:', selectedText);
-          sendResponse({text: selectedText});
-          break;
-        case 'playAudio':
-          this.audioQueue.push({data: request.audioData, isLastChunk: request.isLastChunk});
-          if (!this.currentAudio) {
-            setTimeout(() => this.playNextAudio(), 50);
-          }
-          sendResponse({success: true});
-          break;
-        case 'showError':
-          this.showError(request.error);
-          sendResponse({success: true});
-          break;
-        default:
-          this.logError('Unbekannte Aktion:', request.action);
-          sendResponse({error: 'Unbekannte Aktion'});
-      }
-    } catch (error) {
-      this.logError('Fehler bei der Verarbeitung der Nachricht:', error);
-      sendResponse({error: error.message});
+    switch (request.action) {
+      case 'getSelectedText':
+        const selectedText = window.getSelection().toString().trim();
+        this.log('Ausgewählter Text:', selectedText);
+        sendResponse({text: selectedText});
+        break;
+      case 'playAudioData':
+        // Starten Sie die Audio-Wiedergabe asynchron, ohne auf eine Antwort zu warten
+        this.playAudioData(request.audioData).catch(error => {
+          this.logError('Fehler beim Abspielen der Audio-Daten:', error);
+          this.showError("Fehler beim Abspielen des Audios: " + error.message);
+        });
+        // Senden Sie sofort eine Antwort
+        sendResponse({success: true});
+        break;
+      case 'showError':
+        this.showError(request.error);
+        sendResponse({success: true});
+        break;
+      default:
+        this.logError('Unbekannte Aktion:', request.action);
+        sendResponse({error: 'Unbekannte Aktion'});
     }
-    return true; // Wichtig für asynchrone Antworten
+    // Wichtig: Rückgabewert true, um anzuzeigen, dass sendResponse asynchron aufgerufen wird
+    return true;
   },
 
   init() {

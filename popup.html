@@ -79,9 +79,23 @@
     <div class="input-group">
         <input type="text" id="apiKey" placeholder="OpenAI API-Schlüssel eingeben">
     </div>
-    <button id="saveKey">API-Schlüssel speichern</button>
+    <div class="input-group">
+        <label for="voiceSelect">Stimme auswählen:</label>
+        <select id="voiceSelect">
+            <option value="alloy">Alloy</option>
+            <option value="echo">Echo</option>
+            <option value="fable">Fable</option>
+            <option value="onyx">Onyx</option>
+            <option value="nova">Nova</option>
+            <option value="shimmer">Shimmer</option>
+        </select>
+    </div>
+    <button id="saveSettings">Einstellungen speichern</button>
+    
     <div id="status" class="status"></div>
+    
     <p>Markieren Sie Text auf einer Webseite und wählen Sie "Vorlesen" aus dem Kontextmenü.</p>
+    
     <script src="popup.js"></script>
 </body>
 </html>
