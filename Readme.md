@@ -1,69 +1,75 @@
-# Chrome TTS Plugin mit OpenAI API
+# Chrome TTS Plugin with OpenAI API
 
-## Übersicht
+## Overview
 
-Dieses Chrome-Plugin ermöglicht es Benutzern, markierten Text auf Webseiten mithilfe der OpenAI Text-to-Speech (TTS) API vorlesen zu lassen. Es bietet eine bequeme Möglichkeit, Textinhalte in natürlich klingende Sprache umzuwandeln.
+This Chrome plugin allows users to have selected text on web pages read aloud using the OpenAI Text-to-Speech (TTS) API. It provides a convenient way to convert text content into natural-sounding speech.
 
-## Funktionen
+## Features
 
-- Markieren Sie beliebigen Text auf einer Webseite und lassen Sie ihn vorlesen.
-- Verwendet die hochwertige OpenAI TTS API für natürliche Sprachausgabe.
-- Einfache Integration in das Kontextmenü von Chrome.
-- Unterstützung für verschiedene Stimmen (alloy, echo, fable, onyx, nova, shimmer).
-- Effiziente Verarbeitung von Text jeder Länge in einem einzigen API-Aufruf.
+- Select any text on a webpage and have it read aloud.
+- Uses the high-quality OpenAI TTS API for natural speech output.
+- Easy integration with Chrome's context menu.
+- Support for various voices (alloy, echo, fable, onyx, nova, shimmer).
+- Efficient processing of text of any length in a single API call.
 
 ## Installation
 
-1. Laden Sie den Quellcode des Plugins herunter oder klonen Sie das Repository.
-2. Öffnen Sie Google Chrome und navigieren Sie zu `chrome://extensions`.
-3. Aktivieren Sie den "Entwicklermodus" in der oberen rechten Ecke.
-4. Klicken Sie auf "Entpackte Erweiterung laden".
-5. Wählen Sie den Ordner aus, der den Quellcode des Plugins enthält.
+1. Download the plugin source code or clone the repository.
+2. Open Google Chrome and navigate to `chrome://extensions`.
+3. Enable "Developer mode" in the top right corner.
+4. Click on "Load unpacked extension".
+5. Select the folder containing the plugin source code.
 
-## Konfiguration
+## Configuration
 
-Bevor Sie das Plugin verwenden können, müssen Sie einen gültigen OpenAI API-Schlüssel einrichten:
+Before you can use the plugin, you need to set up a valid OpenAI API key:
 
-1. Klicken Sie auf das Plugin-Icon in der Chrome-Toolbar.
-2. Geben Sie Ihren OpenAI API-Schlüssel in das Eingabefeld ein.
-3. Wählen Sie die gewünschte Stimme aus dem Dropdown-Menü.
-4. Klicken Sie auf "Einstellungen speichern".
+1. Click on the plugin icon in the Chrome toolbar.
+2. Enter your OpenAI API key in the input field.
+3. Select the desired voice from the dropdown menu.
+4. Click on "Save Settings".
 
-## Verwendung
+## Usage
 
-1. Markieren Sie den Text auf einer Webseite, den Sie vorlesen lassen möchten.
-2. Klicken Sie mit der rechten Maustaste auf den markierten Text.
-3. Wählen Sie "Vorlesen" aus dem Kontextmenü.
-4. Der markierte Text wird nun mit der ausgewählten Stimme vorgelesen.
+1. Select the text on a webpage that you want to have read aloud.
+2. Right-click on the selected text.
+3. Choose "Read Aloud" from the context menu.
+4. The selected text will now be read aloud using the chosen voice.
 
-## Technische Details
+## Technical Details
 
-- Das Plugin verwendet Manifest V3 für Chrome-Erweiterungen.
-- Es nutzt die OpenAI TTS API für die Umwandlung von Text in Sprache.
-- Die Audio-Wiedergabe erfolgt direkt im Browser mithilfe der Web Audio API.
-- Asynchrone Kommunikation zwischen Background Script und Content Script für verbesserte Leistung und Zuverlässigkeit.
+- The plugin uses Manifest V3 for Chrome extensions.
+- It utilizes the OpenAI TTS API for text-to-speech conversion.
+- Audio playback is done directly in the browser using the Web Audio API.
+- Asynchronous communication between the background script and content script for improved performance and reliability.
 
-## Fehlerbehebung
+## Project Structure
 
-- Stellen Sie sicher, dass Sie einen gültigen OpenAI API-Schlüssel eingegeben haben.
-- Überprüfen Sie die Konsole in den Entwickler-Tools auf Fehlermeldungen, falls das Plugin nicht wie erwartet funktioniert.
-- Bei Problemen mit der Audio-Wiedergabe versuchen Sie, die Seite neu zu laden und es erneut zu versuchen.
-- Wenn Sie den Fehler "The message port closed before a response was received" erhalten, ist dies normal und beeinträchtigt die Funktionalität des Plugins nicht.
+- `manifest.json`: Configuration file for the Chrome extension
+- `background.js`: Main plugin logic, handles context menu clicks and API requests
+- `content.js`: Interacts with the webpage, handles text selection and audio playback
+- `popup.html` and `popup.js`: User interface and logic for plugin settings
 
-## Datenschutz und Sicherheit
+## Troubleshooting
 
-- Ihr OpenAI API-Schlüssel wird lokal in Ihrem Browser gespeichert und nicht an Dritte weitergegeben.
-- Der zu verarbeitende Text wird nur an die OpenAI API gesendet und nirgendwo sonst gespeichert.
-- Die Audio-Daten werden direkt im Browser verarbeitet und nicht persistent gespeichert.
+- Make sure you've entered a valid OpenAI API key.
+- Check the console in the developer tools for error messages if the plugin isn't working as expected.
+- If you experience issues with audio playback, try reloading the page and attempting again.
 
-## Beitrag
+## Privacy and Security
 
-Beiträge zum Projekt sind willkommen! Bitte erstellen Sie ein Issue oder einen Pull Request, wenn Sie Verbesserungen vorschlagen oder Fehler melden möchten.
+- Your OpenAI API key is stored locally in your browser and is not shared with any third parties.
+- The text to be processed is only sent to the OpenAI API and is not stored anywhere else.
+- Audio data is processed directly in the browser and is not persistently stored.
 
-## Lizenz
+## Contributing
 
-[Fügen Sie hier Ihre gewählte Lizenz ein, z.B. MIT, GPL, etc.]
+Contributions to the project are welcome! Please create an issue or a pull request if you want to suggest improvements or report bugs.
+
+## License
+
+[MIT License](LICENSE)
 
 ---
 
-Entwickelt mit ❤️ und OpenAI's TTS API
+Developed with ❤️ and OpenAI's TTS API

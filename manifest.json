@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Text Vorlesen mit OpenAI TTS",
+  "name": "Text-to-Speech with OpenAI TTS",
   "version": "2.2",
-  "description": "Liest markierten Text mithilfe der OpenAI Text-to-Speech API vor.",
+  "description": "Reads selected text using the OpenAI Text-to-Speech API.",
   "permissions": [
     "activeTab",
     "storage",

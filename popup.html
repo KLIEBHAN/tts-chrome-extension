@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Vorlesen mit OpenAI TTS</title>
+    <title>Text-to-Speech with OpenAI TTS</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -75,12 +75,15 @@
     </style>
 </head>
 <body>
-    <h1>Text Vorlesen mit OpenAI TTS</h1>
+    <h1>Text-to-Speech with OpenAI TTS</h1>
+    
     <div class="input-group">
-        <input type="text" id="apiKey" placeholder="OpenAI API-Schlüssel eingeben">
+        <label for="apiKey">OpenAI API Key:</label>
+        <input type="password" id="apiKey" placeholder="Your API key">
     </div>
+
     <div class="input-group">
-        <label for="voiceSelect">Stimme auswählen:</label>
+        <label for="voiceSelect">Select voice:</label>
         <select id="voiceSelect">
             <option value="alloy">Alloy</option>
             <option value="echo">Echo</option>
@@ -90,12 +93,13 @@
             <option value="shimmer">Shimmer</option>
         </select>
     </div>
-    <button id="saveSettings">Einstellungen speichern</button>
-    
+
+    <button id="saveSettings">Save Settings</button>
+
     <div id="status" class="status"></div>
-    
-    <p>Markieren Sie Text auf einer Webseite und wählen Sie "Vorlesen" aus dem Kontextmenü.</p>
-    
+
+    <p>Select text on a webpage and choose "Read Aloud" from the context menu.</p>
+
     <script src="popup.js"></script>
 </body>
 </html>

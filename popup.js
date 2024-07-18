@@ -5,38 +5,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusDiv = document.getElementById('status');
 
     // Load saved settings
-    chrome.storage.local.get(['apiKey', 'voice'], function(result) {
-        if (result.apiKey) {
-            apiKeyInput.value = result.apiKey;
-        }
-        if (result.voice) {
-            voiceSelect.value = result.voice;
-        }
-    });
+    const loadSettings = () => {
+        chrome.storage.local.get(['apiKey', 'voice'], function(result) {
+            if (result.apiKey) {
+                apiKeyInput.value = result.apiKey;
+            }
+            if (result.voice) {
+                voiceSelect.value = result.voice;
+            }
+        });
+    };
 
-    saveButton.addEventListener('click', function() {
+    // Save settings
+    const saveSettings = () => {
         const apiKey = apiKeyInput.value.trim();
         const selectedVoice = voiceSelect.value;
 
         if (apiKey) {
             chrome.storage.local.set({apiKey: apiKey, voice: selectedVoice}, function() {
                 if (chrome.runtime.lastError) {
-                    showStatus('Fehler beim Speichern der Einstellungen', 'error');
+                    showStatus('Error saving settings', 'error');
                 } else {
-                    showStatus('Einstellungen erfolgreich gespeichert', 'success');
+                    showStatus('Settings saved successfully', 'success');
                 }
             });
         } else {
-            showStatus('Bitte geben Sie einen API-Schlüssel ein', 'error');
+            showStatus('Please enter an API key', 'error');
         }
-    });
+    };
 
-    function showStatus(message, type) {
+    // Show status message
+    const showStatus = (message, type) => {
         statusDiv.textContent = message;
         statusDiv.className = 'status ' + type;
         statusDiv.style.display = 'block';
         setTimeout(() => {
             statusDiv.style.display = 'none';
         }, 3000);
-    }
+    };
+
+    // Event listeners
+    saveButton.addEventListener('click', saveSettings);
+
+    // Initialize
+    loadSettings();
 });
