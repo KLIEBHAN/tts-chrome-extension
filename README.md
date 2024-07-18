@@ -19,10 +19,17 @@ This Chrome extension allows you to listen to selected text on web pages using O
 
 ## Installation
 
-1. Download the plugin source code or clone the repository.
+### From Source
+1. Clone the repository:
+   ```
+   git clone https://github.com/KLIEBHAN/tts-chrome-extension.git
+   ```
 2. Open Chrome and navigate to `chrome://extensions/`.
 3. Enable "Developer mode" in the top right corner.
 4. Click "Load unpacked" and select the folder containing the extension files.
+
+### From Chrome Web Store
+*(Coming soon)*
 
 ## Configuration
 
@@ -74,7 +81,7 @@ If you encounter issues, try the following:
 
 ## Contributing
 
-Contributions to the project are welcome! Please create an issue or a pull request if you want to suggest improvements or report bugs.
+Contributions to the project are welcome! Please create an issue or a pull request on our [GitHub repository](https://github.com/KLIEBHAN/tts-chrome-extension) if you want to suggest improvements or report bugs.
 
 ## License
 
@@ -82,4 +89,4 @@ Contributions to the project are welcome! Please create an issue or a pull reque
 
 ---
 
-Developed with ❤️ for a better web experience.
+Developed with ❤️ for a better web experience. Visit our [GitHub repository](https://github.com/KLIEBHAN/tts-chrome-extension) for the latest updates and to contribute to the project.
