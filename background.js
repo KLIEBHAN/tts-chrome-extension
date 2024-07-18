@@ -122,6 +122,9 @@ const handleContextMenuClick = async (info, tab) => {
   log('Context menu clicked', info, tab);
   try {
     if (info.menuItemId === TTS_PLUGIN.CONTEXT_MENU_ID) {
+      // Show loading indicator
+      await sendMessageToContentScript(tab.id, { action: 'showLoading' });
+
       const selectedText = await getSelectedText(tab.id);
       if (selectedText) {
         const settings = await getSettings();
@@ -141,6 +144,8 @@ const handleContextMenuClick = async (info, tab) => {
     }
   } catch (error) {
     logError('Error during processing:', error);
+    // Hide loading indicator in case of error
+    await sendMessageToContentScript(tab.id, { action: 'hideLoading' });
     showError(tab.id, `Error: ${error.message}`);
   }
 };

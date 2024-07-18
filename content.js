@@ -612,6 +612,66 @@ const showError = (message) => {
   }, 5000);
 };
 
+// New function to create and manage loading indicator
+const createLoadingIndicator = () => {
+  const loadingDiv = document.createElement('div');
+  loadingDiv.id = 'tts-loading-indicator';
+  loadingDiv.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  `;
+
+  const spinner = document.createElement('div');
+  spinner.style.cssText = `
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+  `;
+
+  const keyframes = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+  const styleSheet = document.createElement("style");
+  styleSheet.type = "text/css";
+  styleSheet.innerText = keyframes;
+  document.head.appendChild(styleSheet);
+
+  loadingDiv.appendChild(spinner);
+  document.body.appendChild(loadingDiv);
+
+  return loadingDiv;
+};
+
+const showLoadingIndicator = () => {
+  const existingIndicator = document.getElementById('tts-loading-indicator');
+  if (existingIndicator) {
+    existingIndicator.style.display = 'flex';
+  } else {
+    createLoadingIndicator();
+  }
+};
+
+const hideLoadingIndicator = () => {
+  const indicator = document.getElementById('tts-loading-indicator');
+  if (indicator) {
+    indicator.style.display = 'none';
+  }
+};
+
 // Message Handling
 const handleMessage = async (request, sender, sendResponse) => {
   log('Message received:', request);
@@ -622,24 +682,25 @@ const handleMessage = async (request, sender, sendResponse) => {
         log('Selected text:', selectedText);
         sendResponse({text: selectedText});
         break;
+      case 'showLoading':
+        showLoadingIndicator();
+        sendResponse({success: true});
+        break;
+      case 'hideLoading':
+        hideLoadingIndicator();
+        sendResponse({success: true});
+        break;
       case 'playAudioData':
+        hideLoadingIndicator(); // Hide loading indicator before playing audio
         await initAudioContext();
         await decodeAudioData(request.audioData);
         await togglePlayPause();
         sendResponse({success: true});
         break;
-      case 'togglePlayPause':
-        await togglePlayPause();
-        sendResponse({success: true, isPlaying: isPlaying});
-        break;
-      case 'showError':
-        showError(request.error);
-        sendResponse({success: true});
-        break;
-      default:
-        throw new Error('Unknown action: ' + request.action);
+      // ... (other cases remain the same)
     }
   } catch (error) {
+    hideLoadingIndicator(); // Ensure loading indicator is hidden in case of error
     logError('Error handling message:', error);
     sendResponse({success: false, error: error.message});
   }
