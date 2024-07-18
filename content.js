@@ -25,14 +25,23 @@ let progressBar = null;
 let pauseButton = null;
 let progressInterval = null;
 
+let gainNode = null;
+let volumeControl = null;
+let volumeIcon = null;
+let isMuted = false;
+let lastVolume = 1;
+
+
+
 // Audio context initialization
 const initAudioContext = async () => {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    gainNode = audioContext.createGain();
+    gainNode.connect(audioContext.destination);
   }
 };
 
-let timeDisplay = null;
 
 // UI creation and management
 const createUIElements = () => {
@@ -133,14 +142,122 @@ const createUIElements = () => {
     'Close player'
   );
 
+  volumeControl = document.createElement('input');
+  volumeControl.type = 'range';
+  volumeControl.min = 0;
+  volumeControl.max = 1;
+  volumeControl.step = 0.1;
+  volumeControl.value = 1;
+  volumeControl.style.cssText = `
+    width: 80px;
+    margin-right: 10px;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.3);
+    outline: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  `;
+  volumeControl.addEventListener('input', handleVolumeChange);
+  volumeControl.addEventListener('mouseover', () => volumeControl.style.opacity = '1');
+  volumeControl.addEventListener('mouseout', () => volumeControl.style.opacity = '0.7');
+
+  // Style the volume control thumb and track
+  const thumbStyle = `
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+  `;
+
+  const trackStyle = `
+    width: 100%;
+    height: 5px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+  `;
+
+  volumeControl.style.cssText += `
+    &::-webkit-slider-thumb {
+      ${thumbStyle}
+    }
+    &::-moz-range-thumb {
+      ${thumbStyle}
+    }
+    &::-webkit-slider-runnable-track {
+      ${trackStyle}
+    }
+    &::-moz-range-track {
+      ${trackStyle}
+    }
+  `;
+
+  volumeIcon = createButton(
+    getVolumeIconSVG(1),
+    toggleMute,
+    'Mute/Unmute'
+  );
+  volumeIcon.style.cursor = 'pointer';
+
   progressContainer.appendChild(skipBackButton);
   progressContainer.appendChild(pauseButton);
   progressContainer.appendChild(skipForwardButton);
   progressContainer.appendChild(progressBarContainer);
   progressContainer.appendChild(timeDisplay);
+  progressContainer.appendChild(volumeIcon);
+  progressContainer.appendChild(volumeControl);
   progressContainer.appendChild(downloadButton);
   progressContainer.appendChild(closeButton);
   document.body.appendChild(progressContainer);
+};
+
+
+const handleVolumeChange = (event) => {
+  const volume = parseFloat(event.target.value);
+  setVolume(volume);
+  updateVolumeIcon(volume);
+};
+
+const setVolume = (volume) => {
+  if (gainNode) {
+    gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+  }
+  if (volume > 0) {
+    lastVolume = volume;
+  }
+};
+
+
+const toggleMute = () => {
+  if (isMuted) {
+    setVolume(lastVolume);
+    volumeControl.value = lastVolume;
+  } else {
+    lastVolume = parseFloat(volumeControl.value);
+    setVolume(0);
+    volumeControl.value = 0;
+  }
+  isMuted = !isMuted;
+  updateVolumeIcon(lastVolume);
+};
+
+
+const updateVolumeIcon = (volume) => {
+  volumeIcon.innerHTML = getVolumeIconSVG(isMuted ? 0 : volume);
+};
+
+
+const getVolumeIconSVG = (volume) => {
+  if (volume === 0) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>';
+  } else if (volume < 0.5) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+  } else {
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+  }
 };
 
 const formatTime = (seconds) => {
@@ -244,12 +361,13 @@ const skipAudio = (seconds) => {
   }
 };
 
+
 const playAudio = () => {
   if (!audioBuffer) return;
 
   source = audioContext.createBufferSource();
   source.buffer = audioBuffer;
-  source.connect(audioContext.destination);
+  source.connect(gainNode);
   
   startTime = audioContext.currentTime;
   source.start(0, pausedAt);
