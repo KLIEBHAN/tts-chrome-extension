@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Text Vorlesen</title>
+    <style>
+      body {
+        width: 300px;
+        padding: 10px;
+      }
+      button {
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Text Vorlesen mit OpenAI TTS</h2>
+    <input
+      type="text"
+      id="apiKey"
+      placeholder="OpenAI API-Schlüssel eingeben"
+    />
+    <button id="saveKey">API-Schlüssel speichern</button>
+    <button id="readText">Markierten Text vorlesen</button>
+    <script src="popup.js"></script>
+  </body>
+</html>
