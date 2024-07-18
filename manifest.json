@@ -17,7 +17,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["lame.min.js", "content.js"]
+      "js": ["lib/lame.min.js", "content.js"]
     }
   ],
   "action": {
