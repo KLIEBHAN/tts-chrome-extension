@@ -1,0 +1,16 @@
+
+<!-- 48x48 Icon -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5A5DE8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="48" height="48" rx="10" ry="10" fill="url(#grad2)"/>
+  
+  <!-- Lautsprechersymbol -->
+  <path d="M16 16 L24 16 L32 8 L32 40 L24 32 L16 32 Z" fill="white"/>
+  <path d="M34 15 Q42 24 34 33" stroke="white" stroke-width="3" fill="none"/>
+  <path d="M38 10 Q48 24 38 38" stroke="white" stroke-width="3" fill="none"/>
+</svg>

@@ -1,0 +1,14 @@
+<!-- 16x16 Icon -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <defs>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5A5DE8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="16" height="16" rx="3" ry="3" fill="url(#grad3)"/>
+  
+  <!-- Lautsprechersymbol -->
+  <path d="M5 5 L8 5 L11 2 L11 14 L8 11 L5 11 Z" fill="white"/>
+  <path d="M12 5 Q14 8 12 11" stroke="white" stroke-width="1" fill="none"/>
+</svg>
