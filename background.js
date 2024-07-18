@@ -4,6 +4,7 @@ const TTS_PLUGIN = {
   CONTEXT_MENU_ID: 'readSelectedText',
   CONTEXT_MENU_TITLE: 'Vorlesen',
   MAX_CHUNK_LENGTH: 50,
+  MIN_CHUNK_LENGTH: 25,
   API_ENDPOINT: 'https://api.openai.com/v1/audio/speech',
   TTS_MODEL: 'tts-1',
   VOICE: 'alloy',
@@ -70,33 +71,44 @@ const TTS_PLUGIN = {
   },
 
   splitTextIntoChunks(text) {
-    const sentences = text.match(/[^.!?]+[.!?]+|\S+/g) || [];
+    const words = text.split(/\s+/);
     const chunks = [];
     let currentChunk = '';
 
-    for (const sentence of sentences) {
-      if ((currentChunk + sentence).length <= this.MAX_CHUNK_LENGTH) {
-        currentChunk += (currentChunk ? ' ' : '') + sentence;
+    for (const word of words) {
+      if (currentChunk.length + word.length + 1 <= this.MAX_CHUNK_LENGTH) {
+        currentChunk += (currentChunk ? ' ' : '') + word;
       } else {
-        if (currentChunk) chunks.push(currentChunk.trim());
-        currentChunk = sentence;
+        if (currentChunk.length >= this.MIN_CHUNK_LENGTH) {
+          chunks.push(currentChunk.trim());
+          currentChunk = word;
+        } else {
+          // Wenn der aktuelle Chunk zu kurz ist, fügen wir das Wort trotzdem hinzu
+          currentChunk += ' ' + word;
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+        }
       }
     }
 
-    if (currentChunk) chunks.push(currentChunk.trim());
+    if (currentChunk) {
+      chunks.push(currentChunk.trim());
+    }
+
     return chunks;
   },
 
   async processChunks(chunks, apiKey, tabId) {
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
-      this.log(`Verarbeite Chunk ${i + 1}/${chunks.length}: ${chunk}`);
+      this.log(`Verarbeite Chunk ${i + 1}/${chunks.length}: "${chunk}"`);
       try {
         const audioData = await this.fetchAudioFromOpenAI(chunk, apiKey);
         await this.sendAudioToContentScript(tabId, audioData, i === chunks.length - 1);
         
+        // Warte ein wenig länger zwischen den Chunks
         if (i < chunks.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms Pause zwischen Chunks
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
       } catch (error) {
         this.logError('Fehler beim Verarbeiten des Chunks:', error);
