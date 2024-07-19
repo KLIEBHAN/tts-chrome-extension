@@ -1,0 +1,25 @@
+{
+  "name": "text-to-speech",
+  "version": "1.0.0",
+  "description": "This Chrome extension allows you to listen to selected text on web pages using OpenAI's Text-to-Speech API. With a user-friendly interface and advanced control features, it provides an enhanced listening experience right in your browser.",
+  "main": "background.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "postcss src/style.css -o dist/style.css",
+    "watch": "postcss src/style.css -o dist/style.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.6"
+  },
+  "devDependencies": {
+    "postcss-cli": "^11.0.0"
+  }
+}
