@@ -318,21 +318,21 @@ const UIManager = {
   createUIElements: function() {
     this.progressContainer = document.createElement('div');
     this.progressContainer.className = `
-        fixed top-0 left-0 right-0 h-16 bg-gray-900 bg-opacity-80 z-50
-        flex items-center px-4 text-white shadow-lg
-        border-b border-gray-700
+        fixed top-0 left-0 right-0 h-20 bg-gray-900 bg-opacity-80 z-50
+        flex items-center px-6 text-white shadow-lg
+        border-b border-gray-700 backdrop-filter backdrop-blur-sm
     `;
 
     // Create progress bar with click functionality
     const createProgressBar = () => {
         const container = document.createElement('div');
-        container.className = 'flex-grow h-1 bg-gray-700 rounded-full mx-4 cursor-pointer group relative';
+        container.className = 'flex-grow h-2 bg-gray-700 rounded-full mx-4 cursor-pointer group relative';
 
         this.progressBar = document.createElement('div');
-        this.progressBar.className = 'h-full bg-blue-500 rounded-full transition-all duration-300 ease-out relative';
+        this.progressBar.className = 'h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300 ease-out relative';
 
         const progressHandle = document.createElement('div');
-        progressHandle.className = 'absolute top-1/2 right-0 w-3 h-3 bg-blue-500 rounded-full -mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300';
+        progressHandle.className = 'absolute top-1/2 right-0 w-4 h-4 bg-white rounded-full -mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md';
         this.progressBar.appendChild(progressHandle);
 
         container.appendChild(this.progressBar);
@@ -343,7 +343,7 @@ const UIManager = {
     // Create time display element
     const createTimeDisplay = () => {
         this.timeDisplay = document.createElement('div');
-        this.timeDisplay.className = 'text-xs font-mono mr-4 min-w-[80px] text-center';
+        this.timeDisplay.className = 'text-sm font-mono mr-4 min-w-[90px] text-center bg-gray-800 bg-opacity-50 rounded-md px-2 py-1';
         this.timeDisplay.textContent = '0:00 / 0:00';
         return this.timeDisplay;
     };
@@ -353,9 +353,9 @@ const UIManager = {
         const button = document.createElement('button');
         button.innerHTML = svgPath;
         button.className = `
-            p-2 hover:bg-gray-700 rounded-full transition duration-300
+            p-2 hover:bg-gray-700 hover:bg-opacity-50 rounded-full transition duration-300
             focus:outline-none focus:ring-2 focus:ring-blue-500
-            text-gray-300 hover:text-white
+            text-gray-300 hover:text-white transform hover:scale-110
         `;
         button.setAttribute('title', tooltip);
         button.addEventListener('click', onClick);
@@ -375,6 +375,8 @@ const UIManager = {
         this.volumeControl.value = 1;
         this.volumeControl.className = `
             w-24 accent-blue-500 cursor-pointer
+            appearance-none bg-gray-700 bg-opacity-50 h-1 rounded-full
+            focus:outline-none focus:ring-2 focus:ring-blue-500
         `;
         this.volumeControl.addEventListener('input', this.handleVolumeChange);
 
@@ -388,9 +390,10 @@ const UIManager = {
         const speedControl = document.createElement('select');
         speedControl.id = 'speed-control';
         speedControl.className = `
-            bg-gray-800 text-white border-none rounded px-2 py-1 mr-2
+            bg-gray-800 bg-opacity-50 text-white border-none rounded-md px-2 py-1 mr-2
             focus:outline-none focus:ring-2 focus:ring-blue-500
             text-xs appearance-none cursor-pointer
+            transition duration-300 hover:bg-opacity-75
         `;
         
         PLAYBACK_SPEEDS.forEach(speed => {
@@ -630,10 +633,10 @@ const UIManager = {
         errorDiv = document.createElement('div');
         errorDiv.id = 'tts-error-message';
         errorDiv.className = `
-            fixed top-20 left-1/2 transform -translate-x-1/2
-            bg-red-500 text-white px-4 py-2 rounded-md shadow-lg
+            fixed top-24 left-1/2 transform -translate-x-1/2
+            bg-red-500 bg-opacity-90 text-white px-6 py-3 rounded-lg shadow-lg
             z-50 transition-all duration-300 ease-in-out
-            opacity-0 translate-y-2
+            opacity-0 translate-y-2 max-w-md text-center
         `;
         document.body.appendChild(errorDiv);
     }
@@ -652,22 +655,30 @@ const UIManager = {
     }, 5000);
   },
 
-  // Create and manage loading indicator
   createLoadingIndicator: function() {
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'tts-loading-indicator';
     loadingDiv.className = `
         fixed top-0 left-0 w-full h-full bg-black bg-opacity-50
-        flex justify-center items-center z-50
+        flex justify-center items-center z-50 backdrop-filter backdrop-blur-sm
     `;
 
     const spinner = document.createElement('div');
     spinner.className = `
         border-4 border-blue-500 border-t-transparent rounded-full
-        w-12 h-12 animate-spin
+        w-16 h-16 animate-spin
     `;
 
-    loadingDiv.appendChild(spinner);
+    const loadingText = document.createElement('div');
+    loadingText.textContent = 'Loading...';
+    loadingText.className = 'text-white text-xl mt-4 font-semibold';
+
+    const container = document.createElement('div');
+    container.className = 'flex flex-col items-center';
+    container.appendChild(spinner);
+    container.appendChild(loadingText);
+
+    loadingDiv.appendChild(container);
     document.body.appendChild(loadingDiv);
 
     return loadingDiv;
