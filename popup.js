@@ -36,11 +36,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show status message
     const showStatus = (message, type) => {
+        const statusDiv = document.getElementById('status');
         statusDiv.textContent = message;
-        statusDiv.className = 'status ' + type;
-        statusDiv.style.display = 'block';
+        statusDiv.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+        statusDiv.classList.add(type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800');
+        statusDiv.classList.remove('hidden');
         setTimeout(() => {
-            statusDiv.style.display = 'none';
+            statusDiv.classList.add('hidden');
         }, 3000);
     };
 
