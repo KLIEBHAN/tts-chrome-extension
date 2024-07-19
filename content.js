@@ -9,6 +9,9 @@ const DEFAULT_PLAYBACK_SPEED = 1;
 
 // Utility Functions
 const log = (message, ...args) => console.log(`${TTS_CONTENT.LOG_PREFIX} ${message}`, ...args);
+const debugLog = (message, data) => {
+  console.log(`[TTS Debug] ${message}`, data);
+};
 const logError = (message, ...args) => {
   console.error(`${TTS_CONTENT.ERROR_PREFIX} ${message}`, ...args);
   chrome.runtime.sendMessage({action: "logError", error: message});
@@ -31,15 +34,37 @@ const StateManager = {
   pausedAt: 0,
   isPlaying: false,
   isMuted: false,
+  isPlayerVisible: false,
   lastVolume: 1,
   playbackRate: DEFAULT_PLAYBACK_SPEED,
+
 
   resetPlaybackPosition: function() {
     this.pausedAt = 0;
     this.startTime = 0;
+    
+    // Stoppen und Zurücksetzen der aktuellen Audioquelle, falls vorhanden
+    if (this.source) {
+      this.source.stop();
+      this.source.disconnect();
+      this.source = null;
+    }
+    
+    // Zurücksetzen des AudioContext, falls er existiert
+    if (this.audioContext) {
+      this.audioContext.currentTime = 0;
+    }
+    
+    this.isPlaying = false;
+    
+    // UI aktualisieren
     if (UIManager.progressBar) {
       UIManager.updateProgressBar(0);
     }
+    if (UIManager.timeDisplay) {
+      UIManager.timeDisplay.textContent = '0:00 / ' + formatTime(this.audioBuffer ? this.audioBuffer.duration : 0);
+    }
+    UIManager.updatePauseButton();
   },
 
   setPlaybackRate: function(rate) {
@@ -47,7 +72,23 @@ const StateManager = {
     if (this.source) {
       this.source.playbackRate.setValueAtTime(rate, this.audioContext.currentTime);
     }
-  }
+  },
+
+  setPlayerVisibility: function(isVisible) {
+    this.isPlayerVisible = isVisible;
+  },
+
+  hasAudio: function() {
+    return this.audioBuffer !== null;
+  },
+
+  getCurrentTime: function() {
+    if (this.isPlaying) {
+      return (this.audioContext.currentTime - this.startTime) * this.playbackRate + this.pausedAt;
+    } else {
+      return this.pausedAt;
+    }
+  },
 };
 
 // Audio Processing
@@ -68,7 +109,7 @@ const AudioProcessor = {
 
   playAudio: function() {
     if (!StateManager.audioBuffer) return;
-
+  
     StateManager.source = StateManager.audioContext.createBufferSource();
     StateManager.source.buffer = StateManager.audioBuffer;
     StateManager.source.connect(StateManager.gainNode);
@@ -78,22 +119,26 @@ const AudioProcessor = {
     StateManager.startTime = StateManager.audioContext.currentTime;
     StateManager.source.start(0, StateManager.pausedAt);
     StateManager.isPlaying = true;
-
+  
+    log('Audio playing', { startTime: StateManager.startTime, pausedAt: StateManager.pausedAt });
+  
     UIManager.updateProgress();
     UIManager.updatePauseButton();
   },
 
   pauseAudio: function() {
     if (!StateManager.isPlaying) return;
-
+  
     StateManager.source.stop();
-    const elapsedTime = StateManager.audioContext.currentTime - StateManager.startTime;
+    const elapsedTime = (StateManager.audioContext.currentTime - StateManager.startTime) * StateManager.playbackRate;
     StateManager.pausedAt += elapsedTime;
     StateManager.isPlaying = false;
-
+  
+    log('Audio paused', { pausedAt: StateManager.pausedAt });
+  
     clearInterval(UIManager.progressInterval);
     UIManager.updatePauseButton();
-},
+  },
 
   stopAudio: function() {
     if (StateManager.source) {
@@ -123,22 +168,18 @@ const AudioProcessor = {
   skipAudio: function(seconds) {
     if (!StateManager.audioBuffer) return;
     
-    let currentTime;
-    if (StateManager.isPlaying) {
-        currentTime = StateManager.audioContext.currentTime - StateManager.startTime;
-    } else {
-        currentTime = StateManager.pausedAt;
-    }
-    
+    const currentTime = StateManager.getCurrentTime();
     const newTime = Math.max(0, Math.min(currentTime + seconds, StateManager.audioBuffer.duration));
     
+    debugLog('Skipping audio', { currentTime, newTime, seconds });
+    
     if (StateManager.isPlaying) {
-        this.pauseAudio();
-        StateManager.pausedAt = newTime;
-        this.playAudio();
+      this.pauseAudio();
+      StateManager.pausedAt = newTime;
+      this.playAudio();
     } else {
-        StateManager.pausedAt = newTime;
-        UIManager.updateProgress();
+      StateManager.pausedAt = newTime;
+      UIManager.updateProgress();
     }
   },
 
@@ -421,6 +462,7 @@ const UIManager = {
     this.progressContainer.appendChild(rightControlsContainer);
 
     document.body.appendChild(this.progressContainer);
+    StateManager.setPlayerVisibility(true);
   },
 
 
@@ -503,17 +545,20 @@ const UIManager = {
       this.progressContainer = null;
       this.progressBar = null;
       this.pauseButton = null;
+      StateManager.setPlayerVisibility(false);
     }
   },
 
   // Handle click on progress bar to seek audio
   handleProgressBarClick: function(event) {
     if (!StateManager.audioBuffer) return;
-
+  
     const progressBarContainer = event.currentTarget;
     const clickPosition = event.offsetX / progressBarContainer.offsetWidth;
     const newTime = clickPosition * StateManager.audioBuffer.duration;
-
+  
+    debugLog('Progress bar clicked', { clickPosition, newTime });
+  
     AudioProcessor.seekAudio(newTime);
   },
 
@@ -521,7 +566,7 @@ const UIManager = {
   updateProgress: function() {
     clearInterval(this.progressInterval);
     this.progressInterval = setInterval(() => {
-      const currentTime = StateManager.pausedAt + (StateManager.isPlaying ? (StateManager.audioContext.currentTime - StateManager.startTime) * StateManager.playbackRate : 0);
+      const currentTime = StateManager.getCurrentTime();
       const progress = (currentTime / StateManager.audioBuffer.duration) * 100;
       this.updateProgressBar(progress);
       
@@ -547,12 +592,29 @@ const UIManager = {
     }
   },
 
+  // Restore player UI elements
+  restorePlayer: function() {
+    if (!StateManager.isPlayerVisible) {
+      this.createUIElements();
+      if (StateManager.hasAudio()) {
+        StateManager.resetPlaybackPosition();
+        this.updateProgress();
+        this.updatePauseButton();
+      } else {
+        this.showError('No audio loaded. Please select text and use "Read Aloud" to generate audio.');
+      }
+    } else {
+      this.showError('The player is already visible.');
+    }
+  },
+
   // Close player and reset state
   closePlayer: function() {
     AudioProcessor.stopAudio();
     UIManager.removeUIElements();
-    StateManager.audioBuffer = null;
     StateManager.resetPlaybackPosition();
+    StateManager.setPlayerVisibility(false);
+    chrome.runtime.sendMessage({action: "playerClosed"});
   },
 
   // Handle playback speed change
@@ -647,22 +709,32 @@ const handleMessage = async (request, sender, sendResponse) => {
         sendResponse({success: true});
         break;
       case 'playAudioData':
-      UIManager.hideLoadingIndicator(); // Hide loading indicator before playing audio
-      await AudioProcessor.initAudioContext();
-      await AudioProcessor.decodeAudioData(request.audioData);
-      await UIManager.togglePlayPause();
-      sendResponse({success: true});
-      break;
-    case 'togglePlayPause':
-      await UIManager.togglePlayPause();
-      sendResponse({success: true});
-      break;
-    case 'showError':
-        UIManager.showError(request.error);
+        UIManager.hideLoadingIndicator(); // Hide loading indicator before playing audio
+        await AudioProcessor.initAudioContext();
+        await AudioProcessor.decodeAudioData(request.audioData);
+        await UIManager.togglePlayPause();
         sendResponse({success: true});
         break;
-    default:
-      throw new Error(`Unknown action: ${request.action}`);
+      case 'restorePlayer':
+        if (StateManager.isPlayerVisible) {
+          sendResponse({success: true, message: 'Player is already visible.'});
+        } else if (!StateManager.hasAudio()) {
+          sendResponse({success: false, message: 'No audio loaded. Please select text and use "Read Aloud" to generate audio.'});
+        } else {
+          UIManager.restorePlayer();
+          sendResponse({success: true});
+        }
+        break;
+      case 'togglePlayPause':
+        await UIManager.togglePlayPause();
+        sendResponse({success: true});
+        break;
+      case 'showError':
+          UIManager.showError(request.error);
+          sendResponse({success: true});
+          break;
+      default:
+        throw new Error(`Unknown action: ${request.action}`);
   }
 } catch (error) {
   UIManager.hideLoadingIndicator(); // Ensure loading indicator is hidden in case of error

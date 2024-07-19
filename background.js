@@ -6,6 +6,8 @@ const TTS_PLUGIN = {
   CONTEXT_MENU_TITLE: 'Read Aloud',
   CONTEXT_MENU_PAUSE_ID: 'pauseResumeReading',
   CONTEXT_MENU_PAUSE_TITLE: 'Pause/Resume Reading',
+  CONTEXT_MENU_RESTORE_ID: 'restorePlayer',
+  CONTEXT_MENU_RESTORE_TITLE: 'Restore TTS Player',
   API_ENDPOINT: 'https://api.openai.com/v1/audio/speech',
   TTS_MODEL: 'tts-1',
   DEFAULT_VOICE: 'alloy'
@@ -35,6 +37,7 @@ const createContextMenus = () => {
     }
   });
 
+
   chrome.contextMenus.create({
     id: TTS_PLUGIN.CONTEXT_MENU_PAUSE_ID,
     title: TTS_PLUGIN.CONTEXT_MENU_PAUSE_TITLE,
@@ -44,6 +47,19 @@ const createContextMenus = () => {
       logError('Error creating pause/resume context menu:', chrome.runtime.lastError);
     } else {
       log('Pause/resume context menu created successfully');
+    }
+  });
+
+
+  chrome.contextMenus.create({
+    id: TTS_PLUGIN.CONTEXT_MENU_RESTORE_ID,
+    title: TTS_PLUGIN.CONTEXT_MENU_RESTORE_TITLE,
+    contexts: ['page']
+  }, () => {
+    if (chrome.runtime.lastError) {
+      logError('Error creating restore player context menu:', chrome.runtime.lastError);
+    } else {
+      log('Restore player context menu created successfully');
     }
   });
 };
@@ -141,6 +157,11 @@ const handleContextMenuClick = async (info, tab) => {
       }
     } else if (info.menuItemId === TTS_PLUGIN.CONTEXT_MENU_PAUSE_ID) {
       await sendMessageToContentScript(tab.id, { action: 'togglePlayPause' });
+    } else if (info.menuItemId === TTS_PLUGIN.CONTEXT_MENU_RESTORE_ID) {
+      const response = await sendMessageToContentScript(tab.id, { action: 'restorePlayer' });
+      if (response.success && response.message) {
+        showError(tab.id, response.message);
+      }
     } else {
       throw new Error('Unknown menu item');
     }
