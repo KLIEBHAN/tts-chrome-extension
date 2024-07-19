@@ -318,21 +318,22 @@ const UIManager = {
   createUIElements: function() {
     this.progressContainer = document.createElement('div');
     this.progressContainer.className = `
-        fixed top-0 left-0 right-0 h-20 bg-gray-900 bg-opacity-80 z-50
+        fixed top-0 left-0 right-0 h-20 bg-gray-900/60 z-50
         flex items-center px-6 text-white shadow-lg
-        border-b border-gray-700 backdrop-filter backdrop-blur-sm
+        border-b border-gray-700/50 backdrop-filter backdrop-blur-sm
+        transition-all duration-300 ease-in-out
     `;
 
     // Create progress bar with click functionality
     const createProgressBar = () => {
         const container = document.createElement('div');
-        container.className = 'flex-grow h-2 bg-gray-700 rounded-full mx-4 cursor-pointer group relative';
+        container.className = 'flex-grow h-2 bg-gray-700/50 rounded-full mx-4 cursor-pointer group relative';
 
         this.progressBar = document.createElement('div');
         this.progressBar.className = 'h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300 ease-out relative';
 
         const progressHandle = document.createElement('div');
-        progressHandle.className = 'absolute top-1/2 right-0 w-4 h-4 bg-white rounded-full -mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md';
+        progressHandle.className = 'absolute top-1/2 right-0 w-4 h-4 bg-white rounded-full -mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md transform scale-0 group-hover:scale-100';
         this.progressBar.appendChild(progressHandle);
 
         container.appendChild(this.progressBar);
@@ -343,7 +344,7 @@ const UIManager = {
     // Create time display element
     const createTimeDisplay = () => {
         this.timeDisplay = document.createElement('div');
-        this.timeDisplay.className = 'text-sm font-mono mr-4 min-w-[90px] text-center bg-gray-800 bg-opacity-50 rounded-md px-2 py-1';
+        this.timeDisplay.className = 'text-sm font-mono mr-4 min-w-[90px] text-center bg-gray-800/50 rounded-md px-2 py-1 transition-all duration-300 hover:bg-gray-700/70';
         this.timeDisplay.textContent = '0:00 / 0:00';
         return this.timeDisplay;
     };
@@ -353,9 +354,10 @@ const UIManager = {
         const button = document.createElement('button');
         button.innerHTML = svgPath;
         button.className = `
-            p-2 hover:bg-gray-700 hover:bg-opacity-50 rounded-full transition duration-300
-            focus:outline-none focus:ring-2 focus:ring-blue-500
+            p-2 hover:bg-gray-700/50 rounded-full transition duration-300
+            focus:outline-none focus:ring-2 focus:ring-blue-500/70
             text-gray-300 hover:text-white transform hover:scale-110
+            active:scale-95
         `;
         button.setAttribute('title', tooltip);
         button.addEventListener('click', onClick);
@@ -375,8 +377,9 @@ const UIManager = {
         this.volumeControl.value = 1;
         this.volumeControl.className = `
             w-24 accent-blue-500 cursor-pointer
-            appearance-none bg-gray-700 bg-opacity-50 h-1 rounded-full
-            focus:outline-none focus:ring-2 focus:ring-blue-500
+            appearance-none bg-gray-700/50 h-1 rounded-full
+            focus:outline-none focus:ring-2 focus:ring-blue-500/70
+            transition-all duration-300 hover:bg-gray-600/70
         `;
         this.volumeControl.addEventListener('input', this.handleVolumeChange);
 
@@ -390,10 +393,10 @@ const UIManager = {
         const speedControl = document.createElement('select');
         speedControl.id = 'speed-control';
         speedControl.className = `
-            bg-gray-800 bg-opacity-50 text-white border-none rounded-md px-2 py-1 mr-2
-            focus:outline-none focus:ring-2 focus:ring-blue-500
+            bg-gray-800/50 text-white border-none rounded-md px-2 py-1 mr-2
+            focus:outline-none focus:ring-2 focus:ring-blue-500/70
             text-xs appearance-none cursor-pointer
-            transition duration-300 hover:bg-opacity-75
+            transition duration-300 hover:bg-gray-700/70
         `;
         
         PLAYBACK_SPEEDS.forEach(speed => {
