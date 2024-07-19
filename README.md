@@ -10,17 +10,20 @@ This Chrome extension allows you to listen to selected text on web pages using O
 - **Advanced Audio Controls**: 
   - Play/Pause functionality
   - Skip forward and backward by 5 seconds
-  - Clickable progress bar for precise navigation
+  - Clickable progress bar with visual indicator for precise navigation
   - Volume control with mute/unmute option
 - **Playback Speed Control**: Adjust the speed of audio playback (0.5x to 2x)
-- **Visual Progress Indicator**: See the progress of audio playback in real-time.
+- **Visual Progress Indicator**: See the progress of audio playback in real-time with an interactive progress bar.
 - **Time Display**: Shows current playback time and total duration.
 - **Multiple Voices**: Choose from various available voices (alloy, echo, fable, onyx, nova, shimmer).
 - **Continuous Playback**: Audio pauses at the end instead of stopping, allowing for repeated listening.
 - **Download Option**: Save the generated audio as a MP3 file for offline listening.
 - Efficient processing of text of any length in a single API call.
-- **Tooltips**: Helpful tooltips for all control buttons.
-- **Modern UI**: Utilizes Tailwind CSS for a sleek and responsive design.
+- **Modern UI**: 
+  - Sleek, semi-transparent player at the top of the page
+  - Hover effects for improved user interaction
+  - Responsive design that adapts to different screen sizes
+- **Error Handling**: Clear error messages with smooth animations for better user feedback.
 
 ## Installation
 
