@@ -1,4 +1,4 @@
-// Constants
+// Constants for the Text-to-Speech (TTS) plugin
 const TTS_PLUGIN = {
   LOG_PREFIX: '[TTS Plugin]',
   ERROR_PREFIX: '[TTS Plugin Error]',
@@ -11,17 +11,17 @@ const TTS_PLUGIN = {
   DEFAULT_VOICE: 'alloy'
 };
 
-// Utility functions
+// Utility functions for logging
 const log = (message, ...args) => console.log(`${TTS_PLUGIN.LOG_PREFIX} ${message}`, ...args);
 const logError = (message, ...args) => console.error(`${TTS_PLUGIN.ERROR_PREFIX} ${message}`, ...args);
 
-// Error handling
+// Display error message to user via content script
 const showError = (tabId, message) => {
   logError('Showing error:', message);
   chrome.tabs.sendMessage(tabId, { action: 'showError', error: message });
 };
 
-// Context menu creation
+// Create context menus for the extension
 const createContextMenus = () => {
   chrome.contextMenus.create({
     id: TTS_PLUGIN.CONTEXT_MENU_ID,
@@ -48,7 +48,7 @@ const createContextMenus = () => {
   });
 };
 
-// Settings management
+// Retrieve user settings from chrome.storage
 const getSettings = () => {
   return new Promise((resolve) => {
     chrome.storage.local.get(['apiKey', 'voice'], (result) => {
@@ -60,7 +60,7 @@ const getSettings = () => {
   });
 };
 
-// OpenAI API interaction
+// Fetch audio data from OpenAI API
 const fetchAudioFromOpenAI = async (text, apiKey, voice) => {
   log('Sending request to OpenAI API');
   try {
@@ -89,7 +89,8 @@ const fetchAudioFromOpenAI = async (text, apiKey, voice) => {
     throw error;
   }
 };
-// Content script communication
+
+// Send message to content script and handle potential errors
 const sendMessageToContentScript = async (tabId, message) => {
   return new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(tabId, message, (response) => {
@@ -107,6 +108,7 @@ const sendMessageToContentScript = async (tabId, message) => {
   });
 };
 
+// Retrieve selected text from content script
 const getSelectedText = async (tabId) => {
   try {
     const response = await sendMessageToContentScript(tabId, { action: 'getSelectedText' });
@@ -117,7 +119,7 @@ const getSelectedText = async (tabId) => {
   }
 };
 
-// Main logic
+// Handle context menu clicks
 const handleContextMenuClick = async (info, tab) => {
   log('Context menu clicked', info, tab);
   try {
@@ -150,7 +152,7 @@ const handleContextMenuClick = async (info, tab) => {
   }
 };
 
-// Initialization
+// Initialize the extension
 const init = () => {
   chrome.runtime.onInstalled.addListener(() => {
     log('Plugin installed or updated');

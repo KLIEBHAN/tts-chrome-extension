@@ -14,6 +14,7 @@ const logError = (message, ...args) => {
   chrome.runtime.sendMessage({action: "logError", error: message});
 };
 
+// Format seconds into MM:SS format
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
@@ -42,7 +43,7 @@ let volumeIcon = null;
 let progressInterval = null;
 let tooltipElement = null;
 
-// Audio Context Initialization
+// Initialize Web Audio API context
 const initAudioContext = async () => {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -51,7 +52,7 @@ const initAudioContext = async () => {
   }
 };
 
-// UI Creation and Management
+// Create and append UI elements to the DOM
 const createUIElements = () => {
   progressContainer = document.createElement('div');
   progressContainer.style.cssText = `
@@ -66,6 +67,7 @@ const createUIElements = () => {
     align-items: center;
   `;
 
+  // Create progress bar with click functionality
   const createProgressBar = () => {
     const container = document.createElement('div');
     container.style.cssText = `
@@ -89,6 +91,7 @@ const createUIElements = () => {
     return container;
   };
 
+  // Create time display element
   const createTimeDisplay = () => {
     timeDisplay = document.createElement('div');
     timeDisplay.style.cssText = `
@@ -101,6 +104,7 @@ const createUIElements = () => {
     return timeDisplay;
   };
 
+  // Create button with SVG icon and tooltip
   const createButton = (svgPath, onClick, tooltip) => {
     const button = document.createElement('button');
     button.innerHTML = svgPath;
@@ -131,6 +135,7 @@ const createUIElements = () => {
     return button;
   };
 
+  // Create volume control slider
   const createVolumeControl = () => {
     volumeControl = document.createElement('input');
     volumeControl.type = 'range';
@@ -157,6 +162,7 @@ const createUIElements = () => {
       hideTooltip();
     });
 
+    // Style volume control for webkit and mozilla browsers
     const thumbStyle = `
       -webkit-appearance: none;
       appearance: none;
@@ -185,6 +191,7 @@ const createUIElements = () => {
     return volumeControl;
   };
 
+  // Create playback speed control
   const createSpeedControl = () => {
     const speedControl = document.createElement('select');
     speedControl.id = 'speed-control';
@@ -209,6 +216,7 @@ const createUIElements = () => {
     return speedControl;
   };
 
+  // Create control buttons with SVG icons
   const skipBackButton = createButton(
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/><text x="19.5" y="12" font-family="Arial" font-size="9" fill="currentColor" stroke-width="0.3">5</text></svg>',
     () => skipAudio(-5),
@@ -246,6 +254,7 @@ const createUIElements = () => {
   );
   volumeIcon.style.cursor = 'pointer';
 
+  // Assemble all UI elements
   progressContainer.appendChild(skipBackButton);
   progressContainer.appendChild(pauseButton);
   progressContainer.appendChild(skipForwardButton);
@@ -259,6 +268,7 @@ const createUIElements = () => {
   document.body.appendChild(progressContainer);
 };
 
+// Create and show tooltip
 const showTooltip = (element, text) => {
   if (tooltipElement) {
     hideTooltip();
@@ -282,6 +292,7 @@ const showTooltip = (element, text) => {
   element.appendChild(tooltipElement);
 };
 
+// Hide tooltip
 const hideTooltip = () => {
   if (tooltipElement && tooltipElement.parentNode) {
     tooltipElement.parentNode.removeChild(tooltipElement);
@@ -289,12 +300,14 @@ const hideTooltip = () => {
   tooltipElement = null;
 };
 
+// Handle volume change event
 const handleVolumeChange = (event) => {
   const volume = parseFloat(event.target.value);
   setVolume(volume);
   updateVolumeIcon(volume);
 };
 
+// Set audio volume
 const setVolume = (volume) => {
   if (gainNode) {
     gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
@@ -304,6 +317,7 @@ const setVolume = (volume) => {
   }
 };
 
+// Toggle mute/unmute
 const toggleMute = () => {
   if (isMuted) {
     setVolume(lastVolume);
@@ -317,10 +331,12 @@ const toggleMute = () => {
   updateVolumeIcon(lastVolume);
 };
 
+// Update volume icon based on current volume
 const updateVolumeIcon = (volume) => {
   volumeIcon.innerHTML = getVolumeIconSVG(isMuted ? 0 : volume);
 };
 
+// Get appropriate volume icon SVG based on volume level
 const getVolumeIconSVG = (volume) => {
   if (volume === 0) {
     return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>';
@@ -331,6 +347,7 @@ const getVolumeIconSVG = (volume) => {
   }
 };
 
+// Update progress bar width
 const updateProgressBar = (progress) => {
   if (!progressBar) {
     createUIElements();
@@ -338,6 +355,7 @@ const updateProgressBar = (progress) => {
   progressBar.style.width = `${progress}%`;
 };
 
+// Update pause/play button icon
 const updatePauseButton = () => {
   if (pauseButton) {
     const playIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
@@ -346,6 +364,7 @@ const updatePauseButton = () => {
   }
 };
 
+// Remove UI elements from DOM
 const removeUIElements = () => {
   if (progressContainer) {
     progressContainer.remove();
@@ -355,6 +374,7 @@ const removeUIElements = () => {
   }
 };
 
+// Handle click on progress bar to seek audio
 const handleProgressBarClick = (event) => {
   if (!audioBuffer) return;
 
@@ -365,13 +385,14 @@ const handleProgressBarClick = (event) => {
   seekAudio(newTime);
 };
 
-// Audio Playback Functions
+// Decode audio data from ArrayBuffer
 const decodeAudioData = async (audioData) => {
   const arrayBuffer = new Uint8Array(audioData).buffer;
   audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
   resetPlaybackPosition();
 };
 
+// Reset playback position to start
 const resetPlaybackPosition = () => {
   pausedAt = 0;
   startTime = 0;
@@ -380,6 +401,7 @@ const resetPlaybackPosition = () => {
   }
 };
 
+// Stop audio playback
 const stopAudio = () => {
   if (source) {
     source.stop();
@@ -388,6 +410,7 @@ const stopAudio = () => {
   clearInterval(progressInterval);
 };
 
+// Seek audio to specific time
 const seekAudio = (newTime) => {
   if (!audioBuffer) return;
 
@@ -405,6 +428,7 @@ const seekAudio = (newTime) => {
   }
 };
 
+// Skip audio forward or backward
 const skipAudio = (seconds) => {
   if (!audioBuffer) return;
   
@@ -425,6 +449,7 @@ const skipAudio = (seconds) => {
   }
 };
 
+// Play audio from current position
 const playAudio = () => {
   if (!audioBuffer) return;
 
@@ -442,6 +467,7 @@ const playAudio = () => {
   updatePauseButton();
 };
 
+// Pause audio playback
 const pauseAudio = () => {
   if (!isPlaying) return;
 
@@ -453,6 +479,7 @@ const pauseAudio = () => {
   updatePauseButton();
 };
 
+// Update progress bar and time display
 const updateProgress = () => {
   clearInterval(progressInterval);
   progressInterval = setInterval(() => {
@@ -471,6 +498,7 @@ const updateProgress = () => {
   }, 100);
 };
 
+// Toggle between play and pause
 const togglePlayPause = async () => {
   await initAudioContext();
   
@@ -481,6 +509,7 @@ const togglePlayPause = async () => {
   }
 };
 
+// Close player and reset state
 const closePlayer = () => {
   stopAudio();
   removeUIElements();
@@ -488,6 +517,7 @@ const closePlayer = () => {
   resetPlaybackPosition();
 };
 
+// Handle playback speed change
 const handleSpeedChange = (event) => {
   playbackRate = parseFloat(event.target.value);
   if (source) {
@@ -495,7 +525,7 @@ const handleSpeedChange = (event) => {
   }
 };
 
-// Audio Download Function
+// Convert AudioBuffer to MP3 using lamejs
 const audioBufferToMp3 = (buffer) => {
   const channels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
@@ -506,6 +536,7 @@ const audioBufferToMp3 = (buffer) => {
   const mp3Data = [];
   const sampleBlockSize = 1152;
   
+  // Convert Float32Array to Int16Array for MP3 encoding
   const convertBuffer = (arrayBuffer) => {
     const int16Buffer = new Int16Array(arrayBuffer.length);
     for (let i = 0; i < arrayBuffer.length; i++) {
@@ -517,6 +548,7 @@ const audioBufferToMp3 = (buffer) => {
   const left = convertBuffer(buffer.getChannelData(0));
   const right = channels > 1 ? convertBuffer(buffer.getChannelData(1)) : left;
   
+  // Encode audio data in chunks
   for (let i = 0; i < buffer.length; i += sampleBlockSize) {
     const leftChunk = left.subarray(i, i + sampleBlockSize);
     const rightChunk = right.subarray(i, i + sampleBlockSize);
@@ -526,11 +558,13 @@ const audioBufferToMp3 = (buffer) => {
     }
   }
   
+  // Flush the encoder to get any remaining data
   const mp3buf = mp3encoder.flush();
   if (mp3buf.length > 0) {
     mp3Data.push(mp3buf);
   }
   
+  // Combine all MP3 data chunks into a single Uint8Array
   const totalLength = mp3Data.reduce((acc, buf) => acc + buf.length, 0);
   const mp3Output = new Uint8Array(totalLength);
   let offset = 0;
@@ -542,10 +576,12 @@ const audioBufferToMp3 = (buffer) => {
   return new Blob([mp3Output], { type: 'audio/mp3' });
 };
 
+// Download audio as MP3 file
 const downloadAudio = async () => {
   if (!audioBuffer) return;
 
   try {
+    // Create an offline audio context to render the entire audio buffer
     const offlineContext = new OfflineAudioContext(
       audioBuffer.numberOfChannels,
       audioBuffer.length,
@@ -557,6 +593,7 @@ const downloadAudio = async () => {
     source.connect(offlineContext.destination);
     source.start();
 
+    // Render the audio buffer
     const renderedBuffer = await offlineContext.startRendering();
     log('AudioBuffer details:', {
       numberOfChannels: renderedBuffer.numberOfChannels,
@@ -565,9 +602,11 @@ const downloadAudio = async () => {
       duration: renderedBuffer.duration
     });
 
+    // Convert the rendered buffer to MP3
     const mp3Blob = audioBufferToMp3(renderedBuffer);
     log('MP3 Blob size:', mp3Blob.size);
 
+    // Create a download link and trigger the download
     const url = URL.createObjectURL(mp3Blob);
     const a = document.createElement('a');
     a.style.display = 'none';
@@ -585,7 +624,7 @@ const downloadAudio = async () => {
   }
 };
 
-// Error Handling
+// Display error message to the user
 const showError = (message) => {
   logError('Error:', message);
   let errorDiv = document.getElementById('tts-error-message');
@@ -612,7 +651,7 @@ const showError = (message) => {
   }, 5000);
 };
 
-// New function to create and manage loading indicator
+// Create and manage loading indicator
 const createLoadingIndicator = () => {
   const loadingDiv = document.createElement('div');
   loadingDiv.id = 'tts-loading-indicator';
@@ -639,6 +678,7 @@ const createLoadingIndicator = () => {
     animation: spin 1s linear infinite;
   `;
 
+  // Add keyframe animation for spinner
   const keyframes = `
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -672,7 +712,7 @@ const hideLoadingIndicator = () => {
   }
 };
 
-// Message Handling
+// Handle messages from the background script
 const handleMessage = async (request, sender, sendResponse) => {
   log('Message received:', request);
   try {
@@ -706,7 +746,7 @@ const handleMessage = async (request, sender, sendResponse) => {
   }
 };
 
-// Initialization
+// Initialize the content script
 const init = () => {
   log('Content script loaded');
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
