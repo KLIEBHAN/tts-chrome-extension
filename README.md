@@ -20,6 +20,7 @@ This Chrome extension allows you to listen to selected text on web pages using O
 - **Download Option**: Save the generated audio as a MP3 file for offline listening.
 - Efficient processing of text of any length in a single API call.
 - **Tooltips**: Helpful tooltips for all control buttons.
+- **Modern UI**: Utilizes Tailwind CSS for a sleek and responsive design.
 
 ## Installation
 
@@ -28,9 +29,17 @@ This Chrome extension allows you to listen to selected text on web pages using O
    ```
    git clone https://github.com/KLIEBHAN/tts-chrome-extension.git
    ```
-2. Open Chrome and navigate to `chrome://extensions/`.
-3. Enable "Developer mode" in the top right corner.
-4. Click "Load unpacked" and select the folder containing the extension files.
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Build the project:
+   ```
+   npm run build
+   ```
+4. Open Chrome and navigate to `chrome://extensions/`.
+5. Enable "Developer mode" in the top right corner.
+6. Click "Load unpacked" and select the folder containing the extension files.
 
 ### From Chrome Web Store
 *(Coming soon)*
@@ -59,12 +68,22 @@ Before you can use the plugin, you need to set up a valid OpenAI API key:
    - Download button to save the audio as a MP3 file
    - Close button to stop playback and remove the player
 
+## Development
+
+To work on this extension:
+
+1. Make changes to the source files.
+2. Run `npm run build` to compile Tailwind CSS and other assets.
+3. For continuous development, use `npm run watch` to automatically rebuild on file changes.
+4. Reload the extension in Chrome to see your changes.
+
 ## Technical Details
 
 - The plugin uses Manifest V3 for Chrome extensions.
 - It utilizes the OpenAI TTS API for text-to-speech conversion.
 - Audio playback is done directly in the browser using the Web Audio API.
 - Asynchronous communication between the background script and content script for improved performance and reliability.
+- Tailwind CSS is used for styling, providing a modern and responsive design.
 
 ## Project Structure
 
@@ -72,6 +91,9 @@ Before you can use the plugin, you need to set up a valid OpenAI API key:
 - `background.js`: Main plugin logic, handles context menu clicks and API requests
 - `content.js`: Interacts with the webpage, handles text selection and audio playback
 - `popup.html` and `popup.js`: User interface and logic for plugin settings
+- `src/style.css`: Source Tailwind CSS file
+- `dist/style.css`: Compiled CSS file (generated from Tailwind)
+- `package.json`: Node.js project configuration and scripts
 
 ## Privacy
 
@@ -86,6 +108,7 @@ If you encounter issues, try the following:
 - If you experience issues with audio playback, try reloading the page and attempting again.
 - Refresh the page and try again.
 - Disable and re-enable the extension in `chrome://extensions/`.
+- Ensure that you've run `npm run build` after making changes to the Tailwind CSS.
 
 ## Contributing
 
