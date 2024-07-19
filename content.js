@@ -318,11 +318,15 @@ const UIManager = {
   createUIElements: function() {
     this.progressContainer = document.createElement('div');
     this.progressContainer.className = `
-        fixed top-0 left-0 right-0 h-20 bg-gray-900/60 z-50
+        fixed top-0 left-0 right-0 h-20 bg-gray-900/60
         flex items-center px-6 text-white shadow-lg
         border-b border-gray-700/50 backdrop-filter backdrop-blur-sm
         transition-all duration-300 ease-in-out
     `;
+
+    // Add these lines to ensure the player is always on top
+    this.progressContainer.style.zIndex = '2147483647'; // Maximum z-index value
+    this.progressContainer.style.position = 'fixed';
 
     // Create progress bar with click functionality
     const createProgressBar = () => {
@@ -469,6 +473,7 @@ const UIManager = {
 
     document.body.appendChild(this.progressContainer);
     StateManager.setPlayerVisibility(true);
+    this.setHighestZIndex();
   },
 
 
