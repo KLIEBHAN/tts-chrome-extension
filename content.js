@@ -87,12 +87,13 @@ const AudioProcessor = {
     if (!StateManager.isPlaying) return;
 
     StateManager.source.stop();
-    StateManager.pausedAt += StateManager.audioContext.currentTime - StateManager.startTime;
+    const elapsedTime = StateManager.audioContext.currentTime - StateManager.startTime;
+    StateManager.pausedAt += elapsedTime;
     StateManager.isPlaying = false;
 
     clearInterval(UIManager.progressInterval);
     UIManager.updatePauseButton();
-  },
+},
 
   stopAudio: function() {
     if (StateManager.source) {
@@ -122,20 +123,22 @@ const AudioProcessor = {
   skipAudio: function(seconds) {
     if (!StateManager.audioBuffer) return;
     
-    const wasPlaying = StateManager.isPlaying;
+    let currentTime;
     if (StateManager.isPlaying) {
-      this.pauseAudio();
+        currentTime = StateManager.audioContext.currentTime - StateManager.startTime;
+    } else {
+        currentTime = StateManager.pausedAt;
     }
     
-    const currentTime = StateManager.pausedAt + (wasPlaying ? StateManager.audioContext.currentTime - StateManager.startTime : 0);
     const newTime = Math.max(0, Math.min(currentTime + seconds, StateManager.audioBuffer.duration));
     
-    StateManager.pausedAt = newTime;
-    
-    if (wasPlaying) {
-      this.playAudio();
+    if (StateManager.isPlaying) {
+        this.pauseAudio();
+        StateManager.pausedAt = newTime;
+        this.playAudio();
     } else {
-      UIManager.updateProgress();
+        StateManager.pausedAt = newTime;
+        UIManager.updateProgress();
     }
   },
 
@@ -273,218 +276,153 @@ const UIManager = {
 
   createUIElements: function() {
     this.progressContainer = document.createElement('div');
-    this.progressContainer.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 30px;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 10001;
-      display: flex;
-      align-items: center;
+    this.progressContainer.className = `
+        fixed top-0 left-0 right-0 h-16 bg-gray-900 bg-opacity-80 z-50
+        flex items-center px-4 text-white shadow-lg
+        border-b border-gray-700
     `;
 
     // Create progress bar with click functionality
     const createProgressBar = () => {
-      const container = document.createElement('div');
-      container.style.cssText = `
-        flex-grow: 1;
-        height: 5px;
-        background-color: rgba(255, 255, 255, 0.3);
-        margin: 0 10px;
-        cursor: pointer;
-      `;
+        const container = document.createElement('div');
+        container.className = 'flex-grow h-1 bg-gray-700 rounded-full mx-4 cursor-pointer group relative';
 
-      this.progressBar = document.createElement('div');
-      this.progressBar.style.cssText = `
-        height: 100%;
-        width: 0%;
-        background-color: rgba(76, 175, 80, 0.7);
-        transition: width 0.3s ease-out;
-      `;
+        this.progressBar = document.createElement('div');
+        this.progressBar.className = 'h-full bg-blue-500 rounded-full transition-all duration-300 ease-out relative';
 
-      container.appendChild(this.progressBar);
-      container.addEventListener('click', this.handleProgressBarClick);
-      return container;
+        const progressHandle = document.createElement('div');
+        progressHandle.className = 'absolute top-1/2 right-0 w-3 h-3 bg-blue-500 rounded-full -mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300';
+        this.progressBar.appendChild(progressHandle);
+
+        container.appendChild(this.progressBar);
+        container.addEventListener('click', this.handleProgressBarClick);
+        return container;
     };
 
     // Create time display element
     const createTimeDisplay = () => {
-      this.timeDisplay = document.createElement('div');
-      this.timeDisplay.style.cssText = `
-        color: white;
-        font-size: 12px;
-        margin-right: 10px;
-        font-family: Arial, sans-serif;
-      `;
-      this.timeDisplay.textContent = '0:00 / 0:00';
-      return this.timeDisplay;
+        this.timeDisplay = document.createElement('div');
+        this.timeDisplay.className = 'text-xs font-mono mr-4 min-w-[80px] text-center';
+        this.timeDisplay.textContent = '0:00 / 0:00';
+        return this.timeDisplay;
     };
 
     // Create button with SVG icon and tooltip
     const createButton = (svgPath, onClick, tooltip) => {
-      const button = document.createElement('button');
-      button.innerHTML = svgPath;
-      button.style.cssText = `
-        background: none;
-        border: none;
-        color: white;
-        cursor: pointer;
-        padding: 0 10px;
-        opacity: 0.7;
-        transition: opacity 0.3s;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-      `;
-      button.setAttribute('title', tooltip);
-      button.addEventListener('click', onClick);
-      button.addEventListener('mouseover', () => {
-        button.style.opacity = '1';
-        this.showTooltip(button, tooltip);
-      });
-      button.addEventListener('mouseout', () => {
-        button.style.opacity = '0.7';
-        this.hideTooltip();
-      });
-      return button;
+        const button = document.createElement('button');
+        button.innerHTML = svgPath;
+        button.className = `
+            p-2 hover:bg-gray-700 rounded-full transition duration-300
+            focus:outline-none focus:ring-2 focus:ring-blue-500
+            text-gray-300 hover:text-white
+        `;
+        button.setAttribute('title', tooltip);
+        button.addEventListener('click', onClick);
+        return button;
     };
 
     // Create volume control slider
     const createVolumeControl = () => {
-      this.volumeControl = document.createElement('input');
-      this.volumeControl.type = 'range';
-      this.volumeControl.min = 0;
-      this.volumeControl.max = 1;
-      this.volumeControl.step = 0.1;
-      this.volumeControl.value = 1;
-      this.volumeControl.style.cssText = `
-        width: 80px;
-        margin-right: 10px;
-        -webkit-appearance: none;
-        background: rgba(255, 255, 255, 0.3);
-        outline: none;
-        opacity: 0.7;
-        transition: opacity 0.2s;
-      `;
-      this.volumeControl.addEventListener('input', this.handleVolumeChange);
-      this.volumeControl.addEventListener('mouseover', () => {
-        this.volumeControl.style.opacity = '1';
-        this.showTooltip(this.volumeControl, 'Adjust volume');
-      });
-      this.volumeControl.addEventListener('mouseout', () => {
-        this.volumeControl.style.opacity = '0.7';
-        this.hideTooltip();
-      });
+        const volumeContainer = document.createElement('div');
+        volumeContainer.className = 'flex items-center space-x-2';
 
-      // Style volume control for webkit and mozilla browsers
-      const thumbStyle = `
-        -webkit-appearance: none;
-        appearance: none;
-        width: 15px;
-        height: 15px;
-        border-radius: 50%;
-        background: white;
-        cursor: pointer;
-      `;
+        this.volumeControl = document.createElement('input');
+        this.volumeControl.type = 'range';
+        this.volumeControl.min = 0;
+        this.volumeControl.max = 1;
+        this.volumeControl.step = 0.01;
+        this.volumeControl.value = 1;
+        this.volumeControl.className = `
+            w-24 accent-blue-500 cursor-pointer
+        `;
+        this.volumeControl.addEventListener('input', this.handleVolumeChange);
 
-      const trackStyle = `
-        width: 100%;
-        height: 5px;
-        cursor: pointer;
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 5px;
-      `;
-
-      this.volumeControl.style.cssText += `
-        &::-webkit-slider-thumb { ${thumbStyle} }
-        &::-moz-range-thumb { ${thumbStyle} }
-        &::-webkit-slider-runnable-track { ${trackStyle} }
-        &::-moz-range-track { ${trackStyle} }
-      `;
-
-      return this.volumeControl;
+        volumeContainer.appendChild(this.volumeIcon);
+        volumeContainer.appendChild(this.volumeControl);
+        return volumeContainer;
     };
 
     // Create playback speed control
     const createSpeedControl = () => {
-      const speedControl = document.createElement('select');
-      speedControl.id = 'speed-control';
-      speedControl.style.cssText = `
-        margin-right: 10px;
-        background-color: rgba(255, 255, 255, 0.2);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 5px;
-      `;
-      
-      PLAYBACK_SPEEDS.forEach(speed => {
-        const option = document.createElement('option');
-        option.value = speed;
-        option.textContent = `${speed}x`;
-        if (speed === DEFAULT_PLAYBACK_SPEED) option.selected = true;
-        speedControl.appendChild(option);
-      });
+        const speedControl = document.createElement('select');
+        speedControl.id = 'speed-control';
+        speedControl.className = `
+            bg-gray-800 text-white border-none rounded px-2 py-1 mr-2
+            focus:outline-none focus:ring-2 focus:ring-blue-500
+            text-xs appearance-none cursor-pointer
+        `;
+        
+        PLAYBACK_SPEEDS.forEach(speed => {
+            const option = document.createElement('option');
+            option.value = speed;
+            option.textContent = `${speed}x`;
+            if (speed === DEFAULT_PLAYBACK_SPEED) option.selected = true;
+            speedControl.appendChild(option);
+        });
 
-      speedControl.addEventListener('change', this.handleSpeedChange);
-      return speedControl;
+        speedControl.addEventListener('change', this.handleSpeedChange);
+        return speedControl;
     };
 
     // Create control buttons with SVG icons
     const skipBackButton = createButton(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/><text x="19.5" y="12" font-family="Arial" font-size="9" fill="currentColor" stroke-width="0.3">5</text></svg>',
-      () => AudioProcessor.skipAudio(-5),
-      'Skip backward (5 seconds)'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>',
+        () => AudioProcessor.skipAudio(-5),
+        'Skip backward (5 seconds)'
     );
     
     const skipForwardButton = createButton(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/><text x="19.5" y="12" font-family="Arial" font-size="9" fill="currentColor" stroke-width="0.3">5</text></svg>',
-      () => AudioProcessor.skipAudio(5),
-      'Skip forward (5 seconds)'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>',
+        () => AudioProcessor.skipAudio(5),
+        'Skip forward (5 seconds)'
     );
     
     this.pauseButton = createButton(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>',
-      this.togglePlayPause,
-      'Play/Pause'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>',
+        this.togglePlayPause,
+        'Play/Pause'
     );
     
     const downloadButton = createButton(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
-      () => AudioProcessor.downloadAudio(),
-      'Download audio as MP3'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+        () => AudioProcessor.downloadAudio(),
+        'Download audio as MP3'
     );
     
     const closeButton = createButton(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
-      this.closePlayer,
-      'Close player'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+        this.closePlayer,
+        'Close player'
     );
 
     this.volumeIcon = createButton(
-      this.getVolumeIconSVG(1),
-      () => AudioProcessor.toggleMute(),
-      'Mute/Unmute'
+        this.getVolumeIconSVG(1),
+        () => AudioProcessor.toggleMute(),
+        'Mute/Unmute'
     );
-    this.volumeIcon.style.cursor = 'pointer';
 
     // Assemble all UI elements
-    this.progressContainer.appendChild(skipBackButton);
-    this.progressContainer.appendChild(this.pauseButton);
-    this.progressContainer.appendChild(skipForwardButton);
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'flex items-center space-x-2';
+    controlsContainer.appendChild(skipBackButton);
+    controlsContainer.appendChild(this.pauseButton);
+    controlsContainer.appendChild(skipForwardButton);
+
+    const rightControlsContainer = document.createElement('div');
+    rightControlsContainer.className = 'flex items-center space-x-4';
+    rightControlsContainer.appendChild(createSpeedControl());
+    rightControlsContainer.appendChild(createVolumeControl());
+    rightControlsContainer.appendChild(downloadButton);
+    rightControlsContainer.appendChild(closeButton);
+
+    this.progressContainer.appendChild(controlsContainer);
     this.progressContainer.appendChild(createProgressBar());
     this.progressContainer.appendChild(createTimeDisplay());
-    this.progressContainer.appendChild(createSpeedControl());
-    this.progressContainer.appendChild(this.volumeIcon);
-    this.progressContainer.appendChild(createVolumeControl());
-    this.progressContainer.appendChild(downloadButton);
-    this.progressContainer.appendChild(closeButton);
+    this.progressContainer.appendChild(rightControlsContainer);
+
     document.body.appendChild(this.progressContainer);
   },
+
 
   // Create and show tooltip
   showTooltip: function(element, text) {
@@ -612,7 +550,7 @@ const UIManager = {
   // Close player and reset state
   closePlayer: function() {
     AudioProcessor.stopAudio();
-    this.removeUIElements();
+    UIManager.removeUIElements();
     StateManager.audioBuffer = null;
     StateManager.resetPlaybackPosition();
   },
@@ -627,25 +565,28 @@ const UIManager = {
     logError('Error:', message);
     let errorDiv = document.getElementById('tts-error-message');
     if (!errorDiv) {
-      errorDiv = document.createElement('div');
-      errorDiv.id = 'tts-error-message';
-      errorDiv.style.cssText = `
-        position: fixed;
-        top: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #ff4444;
-        color: white;
-        padding: 10px;
-        border-radius: 5px;
-        z-index: 10000;
-      `;
-      document.body.appendChild(errorDiv);
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'tts-error-message';
+        errorDiv.className = `
+            fixed top-20 left-1/2 transform -translate-x-1/2
+            bg-red-500 text-white px-4 py-2 rounded-md shadow-lg
+            z-50 transition-all duration-300 ease-in-out
+            opacity-0 translate-y-2
+        `;
+        document.body.appendChild(errorDiv);
     }
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
     setTimeout(() => {
-      errorDiv.style.display = 'none';
+        errorDiv.style.opacity = '1';
+        errorDiv.style.transform = 'translate(-50%, 0)';
+    }, 10);
+    setTimeout(() => {
+        errorDiv.style.opacity = '0';
+        errorDiv.style.transform = 'translate(-50%, -10px)';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 300);
     }, 5000);
   },
 
@@ -653,40 +594,16 @@ const UIManager = {
   createLoadingIndicator: function() {
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'tts-loading-indicator';
-    loadingDiv.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 10000;
+    loadingDiv.className = `
+        fixed top-0 left-0 w-full h-full bg-black bg-opacity-50
+        flex justify-center items-center z-50
     `;
 
     const spinner = document.createElement('div');
-    spinner.style.cssText = `
-      border: 5px solid #f3f3f3;
-      border-top: 5px solid #3498db;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
+    spinner.className = `
+        border-4 border-blue-500 border-t-transparent rounded-full
+        w-12 h-12 animate-spin
     `;
-
-    // Add keyframe animation for spinner
-    const keyframes = `
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `;
-    const styleSheet = document.createElement("style");
-    styleSheet.type = "text/css";
-    styleSheet.innerText = keyframes;
-    document.head.appendChild(styleSheet);
 
     loadingDiv.appendChild(spinner);
     document.body.appendChild(loadingDiv);
