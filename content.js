@@ -470,10 +470,9 @@ const UIManager = {
     this.progressContainer.appendChild(createProgressBar());
     this.progressContainer.appendChild(createTimeDisplay());
     this.progressContainer.appendChild(rightControlsContainer);
-
     document.body.appendChild(this.progressContainer);
+
     StateManager.setPlayerVisibility(true);
-    this.setHighestZIndex();
   },
 
 
