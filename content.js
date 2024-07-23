@@ -98,6 +98,23 @@ const StateManager = {
   lastVolume: 1,
   playbackRate: DEFAULT_PLAYBACK_SPEED,
 
+
+  resetState: function() {
+    this.audioContext = null;
+    this.source = null;
+    this.gainNode = null;
+    this.audioBuffer = null;
+    this.startTime = 0;
+    this.pausedAt = 0;
+    this.isPlaying = false;
+    this.isMuted = false;
+    this.isPlayerVisible = false;
+    this.lastVolume = 1;
+    this.playbackRate = DEFAULT_PLAYBACK_SPEED;
+    
+    console.log('State fully reset');
+  },
+
   // Reset playback position and stop current audio source
   resetPlaybackPosition: function() {
     this.pausedAt = 0;
@@ -398,6 +415,7 @@ const UIManager = {
   createUIElements: function() {
     // Check if player already exists
     if (document.getElementById('tts-player-host')) {
+      this.removeUIElements();
       console.log('TTS player already exists, skipping creation');
       return;
     }
@@ -610,7 +628,13 @@ const UIManager = {
   // Update progress bar width
   updateProgressBar: function(progress) {
     if (!this.progressBar) {
+      console.warn('Progress bar not found. Attempting to recreate UI elements.');
       this.createUIElements();
+      
+      if (!this.progressBar) {
+        console.error('Failed to create progress bar. Cannot update progress.');
+        return;
+      }
     }
     this.progressBar.style.width = `${progress}%`;
   },
@@ -682,6 +706,12 @@ const UIManager = {
   restorePlayer: function() {
     if (!StateManager.isPlayerVisible) {
       this.createUIElements();
+      
+      if (!this.progressBar || !this.pauseButton) {
+        this.showError('Failed to create UI elements. Please try again.');
+        return;
+      }
+  
       if (StateManager.hasAudio()) {
         StateManager.resetPlaybackPosition();
         this.updateProgress();
@@ -697,10 +727,19 @@ const UIManager = {
   // Close player and reset state
   closePlayer: function() {
     AudioProcessor.stopAudio();
-    UIManager.removeUIElements();
-    StateManager.resetPlaybackPosition();
-    StateManager.setPlayerVisibility(false);
+    
+    const playerHost = document.getElementById('tts-player-host');
+    if (playerHost) {
+      playerHost.remove();
+    }
+    
+    this.progressBar = null;
+    this.pauseButton = null;
+    
+    StateManager.resetState();
     chrome.runtime.sendMessage({action: "playerClosed"});
+    
+    console.log('Player closed and state reset');
   },
 
   // Handle playback speed change
