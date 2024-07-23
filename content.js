@@ -38,26 +38,26 @@ const StateManager = {
   lastVolume: 1,
   playbackRate: DEFAULT_PLAYBACK_SPEED,
 
-
+  // Reset playback position and stop current audio source
   resetPlaybackPosition: function() {
     this.pausedAt = 0;
     this.startTime = 0;
     
-    // Stoppen und Zurücksetzen der aktuellen Audioquelle, falls vorhanden
+    // Stop and disconnect current audio source if it exists
     if (this.source) {
       this.source.stop();
       this.source.disconnect();
       this.source = null;
     }
     
-    // Zurücksetzen des AudioContext, falls er existiert
+    // Reset AudioContext if it exists
     if (this.audioContext) {
       this.audioContext.currentTime = 0;
     }
     
     this.isPlaying = false;
     
-    // UI aktualisieren
+    // Update UI
     if (UIManager.progressBar) {
       UIManager.updateProgressBar(0);
     }
@@ -67,6 +67,7 @@ const StateManager = {
     UIManager.updatePauseButton();
   },
 
+  // Set playback rate and update audio source if it exists
   setPlaybackRate: function(rate) {
     this.playbackRate = rate;
     if (this.source) {
@@ -82,6 +83,7 @@ const StateManager = {
     return this.audioBuffer !== null;
   },
 
+  // Calculate current playback time based on AudioContext time and playback rate
   getCurrentTime: function() {
     if (this.isPlaying) {
       return (this.audioContext.currentTime - this.startTime) * this.playbackRate + this.pausedAt;
@@ -93,6 +95,7 @@ const StateManager = {
 
 // Audio Processing
 const AudioProcessor = {
+  // Initialize AudioContext and create gain node
   initAudioContext: async function() {
     if (!StateManager.audioContext) {
       StateManager.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -101,12 +104,14 @@ const AudioProcessor = {
     }
   },
 
+  // Decode audio data and store it in StateManager
   decodeAudioData: async function(audioData) {
     const arrayBuffer = new Uint8Array(audioData).buffer;
     StateManager.audioBuffer = await StateManager.audioContext.decodeAudioData(arrayBuffer);
     StateManager.resetPlaybackPosition();
   },
 
+  // Create and start a new audio source
   playAudio: function() {
     if (!StateManager.audioBuffer) return;
   
@@ -126,6 +131,7 @@ const AudioProcessor = {
     UIManager.updatePauseButton();
   },
 
+  // Pause audio playback and update state
   pauseAudio: function() {
     if (!StateManager.isPlaying) return;
   
@@ -148,6 +154,7 @@ const AudioProcessor = {
     clearInterval(UIManager.progressInterval);
   },
 
+  // Seek to a specific time in the audio
   seekAudio: function(newTime) {
     if (!StateManager.audioBuffer) return;
 
@@ -165,6 +172,7 @@ const AudioProcessor = {
     }
   },
 
+  // Skip forward or backward in the audio
   skipAudio: function(seconds) {
     if (!StateManager.audioBuffer) return;
     
@@ -183,6 +191,7 @@ const AudioProcessor = {
     }
   },
 
+  // Set volume of the gain node
   setVolume: function(volume) {
     if (StateManager.gainNode) {
       StateManager.gainNode.gain.setValueAtTime(volume, StateManager.audioContext.currentTime);
@@ -192,6 +201,7 @@ const AudioProcessor = {
     }
   },
 
+  // Toggle mute/unmute
   toggleMute: function() {
     if (StateManager.isMuted) {
       this.setVolume(StateManager.lastVolume);
@@ -256,6 +266,7 @@ const AudioProcessor = {
     return new Blob([mp3Output], { type: 'audio/mp3' });
   },
 
+  // Download audio as MP3
   downloadAudio: async function() {
     if (!StateManager.audioBuffer) return;
 
@@ -315,15 +326,15 @@ const UIManager = {
   progressInterval: null,
   tooltipElement: null,
 
+  // Create and append UI elements to the DOM
   createUIElements: function() {
-
-      // Existenzprüfung für bestehende Elemente hinzufügen
+    // Check if player already exists
     if (document.getElementById('tts-player-host')) {
       console.log('TTS player already exists, skipping creation');
       return;
     }
 
-    // Erstelle ein Shadow DOM für den Player
+    // Create a Shadow DOM for the player
     const shadowHost = document.createElement('div');
     shadowHost.id = 'tts-player-host';
     shadowHost.style.cssText = `
@@ -335,7 +346,7 @@ const UIManager = {
     `;
     const shadowRoot = shadowHost.attachShadow({mode: 'closed'});
 
-    // Füge Tailwind-Styles zum Shadow DOM hinzu
+    // Add Tailwind styles to the Shadow DOM
     const style = document.createElement('style');
     style.textContent = `@import url('${chrome.runtime.getURL('dist/style.css')}');`;
     shadowRoot.appendChild(style);
@@ -348,9 +359,8 @@ const UIManager = {
       transition-all duration-300 ease-in-out
     `;
 
-
-    // Add these lines to ensure the player is always on top
-    this.progressContainer.style.zIndex = '2147483647'; // Maximum z-index value
+    // Ensure the player is always on top
+    this.progressContainer.style.zIndex = '2147483647';
     this.progressContainer.style.position = 'fixed';
 
     // Create progress bar with click functionality
@@ -377,133 +387,133 @@ const UIManager = {
         this.timeDisplay.textContent = '0:00 / 0:00';
         return this.timeDisplay;
     };
-
+    
     // Create button with SVG icon and tooltip
     const createButton = (svgPath, onClick, tooltip) => {
-        const button = document.createElement('button');
-        button.innerHTML = svgPath;
-        button.className = `
-            p-2 hover:bg-gray-700/50 rounded-full transition duration-300
-            focus:outline-none focus:ring-2 focus:ring-blue-500/70
-            text-gray-300 hover:text-white transform hover:scale-110
-            active:scale-95
-        `;
-        button.setAttribute('title', tooltip);
-        button.addEventListener('click', onClick);
-        return button;
+    const button = document.createElement('button');
+    button.innerHTML = svgPath;
+    button.className = `
+        p-2 hover:bg-gray-700/50 rounded-full transition duration-300
+        focus:outline-none focus:ring-2 focus:ring-blue-500/70
+        text-gray-300 hover:text-white transform hover:scale-110
+        active:scale-95
+    `;
+    button.setAttribute('title', tooltip);
+    button.addEventListener('click', onClick);
+    return button;
     };
 
-    // Create volume control slider
-    const createVolumeControl = () => {
-        const volumeContainer = document.createElement('div');
-        volumeContainer.className = 'flex items-center space-x-2';
+  // Create volume control slider
+  const createVolumeControl = () => {
+    const volumeContainer = document.createElement('div');
+    volumeContainer.className = 'flex items-center space-x-2';
 
-        this.volumeControl = document.createElement('input');
-        this.volumeControl.type = 'range';
-        this.volumeControl.min = 0;
-        this.volumeControl.max = 1;
-        this.volumeControl.step = 0.01;
-        this.volumeControl.value = 1;
-        this.volumeControl.className = `
-            w-24 accent-blue-500 cursor-pointer
-            appearance-none bg-gray-700/50 h-1 rounded-full
-            focus:outline-none focus:ring-2 focus:ring-blue-500/70
-            transition-all duration-300 hover:bg-gray-600/70
-        `;
-        this.volumeControl.addEventListener('input', this.handleVolumeChange);
+    this.volumeControl = document.createElement('input');
+    this.volumeControl.type = 'range';
+    this.volumeControl.min = 0;
+    this.volumeControl.max = 1;
+    this.volumeControl.step = 0.01;
+    this.volumeControl.value = 1;
+    this.volumeControl.className = `
+        w-24 accent-blue-500 cursor-pointer
+        appearance-none bg-gray-700/50 h-1 rounded-full
+        focus:outline-none focus:ring-2 focus:ring-blue-500/70
+        transition-all duration-300 hover:bg-gray-600/70
+    `;
+    this.volumeControl.addEventListener('input', this.handleVolumeChange);
 
-        volumeContainer.appendChild(this.volumeIcon);
-        volumeContainer.appendChild(this.volumeControl);
-        return volumeContainer;
+    volumeContainer.appendChild(this.volumeIcon);
+    volumeContainer.appendChild(this.volumeControl);
+    return volumeContainer;
     };
 
-    // Create playback speed control
-    const createSpeedControl = () => {
-        const speedControl = document.createElement('select');
-        speedControl.id = 'speed-control';
-        speedControl.className = `
-            bg-gray-800/50 text-white border-none rounded-md px-2 py-1 mr-2
-            focus:outline-none focus:ring-2 focus:ring-blue-500/70
-            text-xs appearance-none cursor-pointer
-            transition duration-300 hover:bg-gray-700/70
-        `;
-        
-        PLAYBACK_SPEEDS.forEach(speed => {
-            const option = document.createElement('option');
-            option.value = speed;
-            option.textContent = `${speed}x`;
-            if (speed === DEFAULT_PLAYBACK_SPEED) option.selected = true;
-            speedControl.appendChild(option);
-        });
-
-        speedControl.addEventListener('change', this.handleSpeedChange);
-        return speedControl;
-    };
-
-    // Create control buttons with SVG icons
-    const skipBackButton = createButton(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>',
-        () => AudioProcessor.skipAudio(-5),
-        'Skip backward (5 seconds)'
-    );
+  // Create playback speed control
+  const createSpeedControl = () => {
+    const speedControl = document.createElement('select');
+    speedControl.id = 'speed-control';
+    speedControl.className = `
+        bg-gray-800/50 text-white border-none rounded-md px-2 py-1 mr-2
+        focus:outline-none focus:ring-2 focus:ring-blue-500/70
+        text-xs appearance-none cursor-pointer
+        transition duration-300 hover:bg-gray-700/70
+    `;
     
-    const skipForwardButton = createButton(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>',
-        () => AudioProcessor.skipAudio(5),
-        'Skip forward (5 seconds)'
-    );
-    
-    this.pauseButton = createButton(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>',
-        this.togglePlayPause,
-        'Play/Pause'
-    );
-    
-    const downloadButton = createButton(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
-        () => AudioProcessor.downloadAudio(),
-        'Download audio as MP3'
-    );
-    
-    const closeButton = createButton(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
-        this.closePlayer,
-        'Close player'
-    );
+    PLAYBACK_SPEEDS.forEach(speed => {
+      const option = document.createElement('option');
+      option.value = speed;
+      option.textContent = `${speed}x`;
+      if (speed === DEFAULT_PLAYBACK_SPEED) option.selected = true;
+      speedControl.appendChild(option);
+    });
 
-    this.volumeIcon = createButton(
-        this.getVolumeIconSVG(1),
-        () => AudioProcessor.toggleMute(),
-        'Mute/Unmute'
-    );
+    speedControl.addEventListener('change', this.handleSpeedChange);
+    return speedControl;
+  };
 
-    // Assemble all UI elements
-    const controlsContainer = document.createElement('div');
-    controlsContainer.className = 'flex items-center space-x-2';
-    controlsContainer.appendChild(skipBackButton);
-    controlsContainer.appendChild(this.pauseButton);
-    controlsContainer.appendChild(skipForwardButton);
+  // Create control buttons with SVG icons
+  const skipBackButton = createButton(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>',
+      () => AudioProcessor.skipAudio(-5),
+      'Skip backward (5 seconds)'
+  );
+  
+  const skipForwardButton = createButton(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>',
+      () => AudioProcessor.skipAudio(5),
+      'Skip forward (5 seconds)'
+  );
+  
+  this.pauseButton = createButton(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>',
+      this.togglePlayPause,
+      'Play/Pause'
+  );
+  
+  const downloadButton = createButton(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+      () => AudioProcessor.downloadAudio(),
+      'Download audio as MP3'
+  );
+  
+  const closeButton = createButton(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+      this.closePlayer,
+      'Close player'
+  );
 
-    const rightControlsContainer = document.createElement('div');
-    rightControlsContainer.className = 'flex items-center space-x-4';
-    rightControlsContainer.appendChild(createSpeedControl());
-    rightControlsContainer.appendChild(createVolumeControl());
-    rightControlsContainer.appendChild(downloadButton);
-    rightControlsContainer.appendChild(closeButton);
+  this.volumeIcon = createButton(
+      this.getVolumeIconSVG(1),
+      () => AudioProcessor.toggleMute(),
+      'Mute/Unmute'
+  );
 
-    this.progressContainer.appendChild(controlsContainer);
-    this.progressContainer.appendChild(createProgressBar());
-    this.progressContainer.appendChild(createTimeDisplay());
-    this.progressContainer.appendChild(rightControlsContainer);
+  // Assemble all UI elements
+  const controlsContainer = document.createElement('div');
+  controlsContainer.className = 'flex items-center space-x-2';
+  controlsContainer.appendChild(skipBackButton);
+  controlsContainer.appendChild(this.pauseButton);
+  controlsContainer.appendChild(skipForwardButton);
 
-    shadowRoot.appendChild(this.progressContainer);
-    document.body.appendChild(shadowHost);
-    StateManager.setPlayerVisibility(true);
-    this.setHighestZIndex();
+  const rightControlsContainer = document.createElement('div');
+  rightControlsContainer.className = 'flex items-center space-x-4';
+  rightControlsContainer.appendChild(createSpeedControl());
+  rightControlsContainer.appendChild(createVolumeControl());
+  rightControlsContainer.appendChild(downloadButton);
+  rightControlsContainer.appendChild(closeButton);
 
-    // Logging für Debugging
-    console.log('TTS player created and added to DOM');
-  },
+  this.progressContainer.appendChild(controlsContainer);
+  this.progressContainer.appendChild(createProgressBar());
+  this.progressContainer.appendChild(createTimeDisplay());
+  this.progressContainer.appendChild(rightControlsContainer);
+
+  shadowRoot.appendChild(this.progressContainer);
+  document.body.appendChild(shadowHost);
+  StateManager.setPlayerVisibility(true);
+  this.setHighestZIndex();
+
+  // Logging für Debugging
+  console.log('TTS player created and added to DOM');
+},
 
 
   // Create and show tooltip
@@ -667,31 +677,32 @@ const UIManager = {
     logError('Error:', message);
     let errorDiv = document.getElementById('tts-error-message');
     if (!errorDiv) {
-        errorDiv = document.createElement('div');
-        errorDiv.id = 'tts-error-message';
-        errorDiv.className = `
-            fixed top-24 left-1/2 transform -translate-x-1/2
-            bg-red-500 bg-opacity-90 text-white px-6 py-3 rounded-lg shadow-lg
-            z-50 transition-all duration-300 ease-in-out
-            opacity-0 translate-y-2 max-w-md text-center
-        `;
-        document.body.appendChild(errorDiv);
+      errorDiv = document.createElement('div');
+      errorDiv.id = 'tts-error-message';
+      errorDiv.className = `
+          fixed top-24 left-1/2 transform -translate-x-1/2
+          bg-red-500 bg-opacity-90 text-white px-6 py-3 rounded-lg shadow-lg
+          z-50 transition-all duration-300 ease-in-out
+          opacity-0 translate-y-2 max-w-md text-center
+      `;
+      document.body.appendChild(errorDiv);
     }
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
     setTimeout(() => {
-        errorDiv.style.opacity = '1';
-        errorDiv.style.transform = 'translate(-50%, 0)';
+      errorDiv.style.opacity = '1';
+      errorDiv.style.transform = 'translate(-50%, 0)';
     }, 10);
     setTimeout(() => {
-        errorDiv.style.opacity = '0';
-        errorDiv.style.transform = 'translate(-50%, -10px)';
-        setTimeout(() => {
-            errorDiv.style.display = 'none';
-        }, 300);
+      errorDiv.style.opacity = '0';
+      errorDiv.style.transform = 'translate(-50%, -10px)';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 300);
     }, 5000);
   },
 
+  // Create loading indicator
   createLoadingIndicator: function() {
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'tts-loading-indicator';
@@ -737,6 +748,7 @@ const UIManager = {
     }
   },
 
+  // Set the highest z-index for the player
   setHighestZIndex: function() {
     const shadowHost = document.getElementById('tts-player-host');
     if (!shadowHost) {
@@ -744,12 +756,14 @@ const UIManager = {
       return;
     }
   
+    // Find the highest z-index in the document
     let highestZ = Math.max(
       ...Array.from(document.querySelectorAll('body *'))
         .map(el => parseFloat(window.getComputedStyle(el).zIndex))
         .filter(zIndex => !isNaN(zIndex))
     );
   
+    // Set the player's z-index to be higher than the highest found
     const newZIndex = Math.max(highestZ + 1, 2147483647);
     shadowHost.style.zIndex = newZIndex.toString();
   
@@ -783,7 +797,7 @@ const handleMessage = async (request, sender, sendResponse) => {
         await UIManager.togglePlayPause();
         sendResponse({success: true});
         break;
-      case 'restorePlayer':
+        case 'restorePlayer':
         if (StateManager.isPlayerVisible) {
           sendResponse({success: true, message: 'Player is already visible.'});
         } else if (!StateManager.hasAudio()) {
@@ -798,26 +812,26 @@ const handleMessage = async (request, sender, sendResponse) => {
         sendResponse({success: true});
         break;
       case 'showError':
-          UIManager.showError(request.error);
-          sendResponse({success: true});
-          break;
+        UIManager.showError(request.error);
+        sendResponse({success: true});
+        break;
       default:
         throw new Error(`Unknown action: ${request.action}`);
+    }
+  } catch (error) {
+    UIManager.hideLoadingIndicator(); // Ensure loading indicator is hidden in case of error
+    logError('Error handling message:', error);
+    sendResponse({success: false, error: error.message});
   }
-} catch (error) {
-  UIManager.hideLoadingIndicator(); // Ensure loading indicator is hidden in case of error
-  logError('Error handling message:', error);
-  sendResponse({success: false, error: error.message});
-}
 };
 
 // Initialize the content script
 const init = () => {
-log('Content script loaded');
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  handleMessage(request, sender, sendResponse);
-  return true; // Indicates that the response is sent asynchronously
-});
+  log('Content script loaded');
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    handleMessage(request, sender, sendResponse);
+    return true; // Indicates that the response is sent asynchronously
+  });
 };
 
 init();
