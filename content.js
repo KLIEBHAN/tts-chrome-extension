@@ -386,6 +386,14 @@ const UIManager = {
   progressInterval: null,
   tooltipElement: null,
 
+
+  ensurePlayerHostExists: function() {
+    if (!document.getElementById('tts-player-host')) {
+      console.log('Creating TTS player host');
+      this.createUIElements();
+    }
+  },
+
   // Create and append UI elements to the DOM
   createUIElements: function() {
     // Check if player already exists
@@ -404,7 +412,8 @@ const UIManager = {
       width: 100%;
       z-index: 2147483647;
     `;
-    const shadowRoot = shadowHost.attachShadow({mode: 'closed'});
+    shadowHost.id = 'tts-player-host';
+    const shadowRoot = shadowHost.attachShadow({mode: 'open'});
 
     // Add Tailwind styles to the Shadow DOM
     const style = document.createElement('style');
@@ -722,41 +731,69 @@ const UIManager = {
 
   // Create loading indicator
   createLoadingIndicator: function() {
+    this.ensurePlayerHostExists();
+
+    // Find the shadow host element
+    const shadowHost = document.getElementById('tts-player-host');
+    if (!shadowHost) {
+      console.error('TTS player host element still not found after creation attempt');
+      return null;
+    }
+    const shadowRoot = shadowHost.shadowRoot;
+  
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'tts-loading-indicator';
     loadingDiv.className = CSS_CLASSES.LOADING_INDICATOR;
-
+  
     const spinner = document.createElement('div');
     spinner.className = CSS_CLASSES.LOADING_SPINNER;
-
+  
     const loadingText = document.createElement('div');
     loadingText.textContent = 'Loading...';
     loadingText.className = CSS_CLASSES.LOADING_TEXT;
-
+  
     const container = document.createElement('div');
     container.className = 'flex flex-col items-center';
     container.appendChild(spinner);
     container.appendChild(loadingText);
-
+  
     loadingDiv.appendChild(container);
-    document.body.appendChild(loadingDiv);
-
+    
+    // Add the loading indicator to the shadow root
+    shadowRoot.appendChild(loadingDiv);
+  
     return loadingDiv;
   },
 
   showLoadingIndicator: function() {
-    const existingIndicator = document.getElementById('tts-loading-indicator');
+    this.ensurePlayerHostExists();
+    
+    const shadowHost = document.getElementById('tts-player-host');
+    if (!shadowHost) {
+      console.error('TTS player host element not found when showing loading indicator');
+      return;
+    }
+    const shadowRoot = shadowHost.shadowRoot;
+    let existingIndicator = shadowRoot.getElementById('tts-loading-indicator');
     if (existingIndicator) {
       existingIndicator.style.display = 'flex';
     } else {
       this.createLoadingIndicator();
     }
+    console.log('Loading indicator shown');
   },
-
+  
   hideLoadingIndicator: function() {
-    const indicator = document.getElementById('tts-loading-indicator');
+    const shadowHost = document.getElementById('tts-player-host');
+    if (!shadowHost) {
+      console.log('TTS player host not found when hiding loading indicator. It may have been already removed.');
+      return;
+    }
+    const shadowRoot = shadowHost.shadowRoot;
+    const indicator = shadowRoot.getElementById('tts-loading-indicator');
     if (indicator) {
       indicator.style.display = 'none';
+      console.log('Loading indicator hidden');
     }
   },
 
