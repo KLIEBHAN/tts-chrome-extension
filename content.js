@@ -4,6 +4,66 @@ const TTS_CONTENT = {
   ERROR_PREFIX: '[TTS Plugin Content Error]',
 };
 
+// UI Constants
+const UI_CONSTANTS = {
+  PLAYER_HEIGHT: '20',
+  PROGRESS_BAR_HEIGHT: '2',
+  VOLUME_CONTROL_WIDTH: '24',
+  TOOLTIP_Z_INDEX: '10002',
+  ERROR_DISPLAY_DURATION: 5000,
+  ERROR_ANIMATION_DURATION: 300,
+  PROGRESS_UPDATE_INTERVAL: 100,
+  DOWNLOAD_LINK_REMOVAL_DELAY: 100,
+};
+
+// CSS Classes
+const CSS_CLASSES = {
+  PLAYER_CONTAINER: `
+    fixed top-0 left-0 right-0 h-${UI_CONSTANTS.PLAYER_HEIGHT} bg-gray-900/60
+    flex items-center px-6 text-white shadow-lg
+    border-b border-gray-700/50 backdrop-filter backdrop-blur-sm
+    transition-all duration-300 ease-in-out
+  `,
+  PROGRESS_BAR_CONTAINER: 'flex-grow h-2 bg-gray-700/50 rounded-full mx-4 cursor-pointer group relative',
+  PROGRESS_BAR: 'h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300 ease-out relative',
+  PROGRESS_HANDLE: 'absolute top-1/2 right-0 w-4 h-4 bg-white rounded-full -mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md transform scale-0 group-hover:scale-100',
+  TIME_DISPLAY: 'text-sm font-mono mr-4 min-w-[90px] text-center bg-gray-800/50 rounded-md px-2 py-1 transition-all duration-300 hover:bg-gray-700/70',
+  BUTTON: `
+    p-2 hover:bg-gray-700/50 rounded-full transition duration-300
+    focus:outline-none focus:ring-2 focus:ring-blue-500/70
+    text-gray-300 hover:text-white transform hover:scale-110
+    active:scale-95
+  `,
+  VOLUME_CONTROL: `
+    w-${UI_CONSTANTS.VOLUME_CONTROL_WIDTH} accent-blue-500 cursor-pointer
+    appearance-none bg-gray-700/50 h-1 rounded-full
+    focus:outline-none focus:ring-2 focus:ring-blue-500/70
+    transition-all duration-300 hover:bg-gray-600/70
+  `,
+  SPEED_CONTROL: `
+    bg-gray-800/50 text-white border-none rounded-md px-2 py-1 mr-2
+    focus:outline-none focus:ring-2 focus:ring-blue-500/70
+    text-xs appearance-none cursor-pointer
+    transition duration-300 hover:bg-gray-700/70
+  `,
+  ERROR_MESSAGE: `
+    fixed top-24 left-1/2 transform -translate-x-1/2
+    bg-red-500 bg-opacity-90 text-white px-6 py-3 rounded-lg shadow-lg
+    z-50 transition-all duration-300 ease-in-out
+    opacity-0 translate-y-2 max-w-md text-center
+  `,
+  LOADING_INDICATOR: `
+    fixed top-0 left-0 w-full h-full bg-black bg-opacity-50
+    flex justify-center items-center z-50 backdrop-filter backdrop-blur-sm
+  `,
+  LOADING_SPINNER: `
+    border-4 border-blue-500 border-t-transparent rounded-full
+    w-16 h-16 animate-spin
+  `,
+  LOADING_TEXT: 'text-white text-xl mt-4 font-semibold',
+};
+
+
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const DEFAULT_PLAYBACK_SPEED = 1;
 
@@ -307,7 +367,7 @@ const AudioProcessor = {
       setTimeout(() => {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-      }, 100);
+      }, UI_CONSTANTS.DOWNLOAD_LINK_REMOVAL_DELAY);
     } catch (error) {
       logError('Error during audio download:', error);
       UIManager.showError('Failed to download audio. Please try again.');
@@ -352,12 +412,7 @@ const UIManager = {
     shadowRoot.appendChild(style);
 
     this.progressContainer = document.createElement('div');
-    this.progressContainer.className = `
-      fixed top-0 left-0 right-0 h-20 bg-gray-900/60
-      flex items-center px-6 text-white shadow-lg
-      border-b border-gray-700/50 backdrop-filter backdrop-blur-sm
-      transition-all duration-300 ease-in-out
-    `;
+    this.progressContainer.className = CSS_CLASSES.PLAYER_CONTAINER;
 
     // Ensure the player is always on top
     this.progressContainer.style.zIndex = '2147483647';
@@ -365,42 +420,37 @@ const UIManager = {
 
     // Create progress bar with click functionality
     const createProgressBar = () => {
-        const container = document.createElement('div');
-        container.className = 'flex-grow h-2 bg-gray-700/50 rounded-full mx-4 cursor-pointer group relative';
+      const container = document.createElement('div');
+      container.className = CSS_CLASSES.PROGRESS_BAR_CONTAINER;
+  
+      this.progressBar = document.createElement('div');
+      this.progressBar.className = CSS_CLASSES.PROGRESS_BAR;
+  
+      const progressHandle = document.createElement('div');
+      progressHandle.className = CSS_CLASSES.PROGRESS_HANDLE;
+      this.progressBar.appendChild(progressHandle);
 
-        this.progressBar = document.createElement('div');
-        this.progressBar.className = 'h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300 ease-out relative';
-
-        const progressHandle = document.createElement('div');
-        progressHandle.className = 'absolute top-1/2 right-0 w-4 h-4 bg-white rounded-full -mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md transform scale-0 group-hover:scale-100';
-        this.progressBar.appendChild(progressHandle);
-
-        container.appendChild(this.progressBar);
-        container.addEventListener('click', this.handleProgressBarClick);
-        return container;
+      container.appendChild(this.progressBar);
+      container.addEventListener('click', this.handleProgressBarClick);
+      return container;
     };
 
     // Create time display element
     const createTimeDisplay = () => {
-        this.timeDisplay = document.createElement('div');
-        this.timeDisplay.className = 'text-sm font-mono mr-4 min-w-[90px] text-center bg-gray-800/50 rounded-md px-2 py-1 transition-all duration-300 hover:bg-gray-700/70';
-        this.timeDisplay.textContent = '0:00 / 0:00';
-        return this.timeDisplay;
+      this.timeDisplay = document.createElement('div');
+      this.timeDisplay.className = CSS_CLASSES.TIME_DISPLAY;
+      this.timeDisplay.textContent = '0:00 / 0:00';
+      return this.timeDisplay;
     };
     
     // Create button with SVG icon and tooltip
     const createButton = (svgPath, onClick, tooltip) => {
-    const button = document.createElement('button');
-    button.innerHTML = svgPath;
-    button.className = `
-        p-2 hover:bg-gray-700/50 rounded-full transition duration-300
-        focus:outline-none focus:ring-2 focus:ring-blue-500/70
-        text-gray-300 hover:text-white transform hover:scale-110
-        active:scale-95
-    `;
-    button.setAttribute('title', tooltip);
-    button.addEventListener('click', onClick);
-    return button;
+      const button = document.createElement('button');
+      button.innerHTML = svgPath;
+      button.className = CSS_CLASSES.BUTTON;
+      button.setAttribute('title', tooltip);
+      button.addEventListener('click', onClick);
+      return button;
     };
 
   // Create volume control slider
@@ -414,12 +464,7 @@ const UIManager = {
     this.volumeControl.max = 1;
     this.volumeControl.step = 0.01;
     this.volumeControl.value = 1;
-    this.volumeControl.className = `
-        w-24 accent-blue-500 cursor-pointer
-        appearance-none bg-gray-700/50 h-1 rounded-full
-        focus:outline-none focus:ring-2 focus:ring-blue-500/70
-        transition-all duration-300 hover:bg-gray-600/70
-    `;
+    this.volumeControl.className = CSS_CLASSES.VOLUME_CONTROL;
     this.volumeControl.addEventListener('input', this.handleVolumeChange);
 
     volumeContainer.appendChild(this.volumeIcon);
@@ -431,12 +476,7 @@ const UIManager = {
   const createSpeedControl = () => {
     const speedControl = document.createElement('select');
     speedControl.id = 'speed-control';
-    speedControl.className = `
-        bg-gray-800/50 text-white border-none rounded-md px-2 py-1 mr-2
-        focus:outline-none focus:ring-2 focus:ring-blue-500/70
-        text-xs appearance-none cursor-pointer
-        transition duration-300 hover:bg-gray-700/70
-    `;
+    speedControl.className = CSS_CLASSES.SPEED_CONTROL;
     
     PLAYBACK_SPEEDS.forEach(speed => {
       const option = document.createElement('option');
@@ -523,20 +563,7 @@ const UIManager = {
     }
     this.tooltipElement = document.createElement('div');
     this.tooltipElement.textContent = text;
-    this.tooltipElement.style.cssText = `
-      position: absolute;
-      background-color: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 5px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      white-space: nowrap;
-      z-index: 10002;
-      pointer-events: none;
-    `;
+    this.tooltipElement.style.zIndex = UI_CONSTANTS.TOOLTIP_Z_INDEX;
     element.appendChild(this.tooltipElement);
   },
 
@@ -628,7 +655,7 @@ const UIManager = {
         AudioProcessor.pauseAudio();
         this.updatePauseButton();
       }
-    }, 100);
+    }, UI_CONSTANTS.PROGRESS_UPDATE_INTERVAL);
   },
 
   // Toggle between play and pause
@@ -679,47 +706,32 @@ const UIManager = {
     if (!errorDiv) {
       errorDiv = document.createElement('div');
       errorDiv.id = 'tts-error-message';
-      errorDiv.className = `
-          fixed top-24 left-1/2 transform -translate-x-1/2
-          bg-red-500 bg-opacity-90 text-white px-6 py-3 rounded-lg shadow-lg
-          z-50 transition-all duration-300 ease-in-out
-          opacity-0 translate-y-2 max-w-md text-center
-      `;
+      errorDiv.className = CSS_CLASSES.ERROR_MESSAGE;
       document.body.appendChild(errorDiv);
     }
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
     setTimeout(() => {
-      errorDiv.style.opacity = '1';
-      errorDiv.style.transform = 'translate(-50%, 0)';
-    }, 10);
-    setTimeout(() => {
       errorDiv.style.opacity = '0';
       errorDiv.style.transform = 'translate(-50%, -10px)';
       setTimeout(() => {
         errorDiv.style.display = 'none';
-      }, 300);
-    }, 5000);
+      }, UI_CONSTANTS.ERROR_ANIMATION_DURATION);
+    }, UI_CONSTANTS.ERROR_DISPLAY_DURATION);
   },
 
   // Create loading indicator
   createLoadingIndicator: function() {
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'tts-loading-indicator';
-    loadingDiv.className = `
-        fixed top-0 left-0 w-full h-full bg-black bg-opacity-50
-        flex justify-center items-center z-50 backdrop-filter backdrop-blur-sm
-    `;
+    loadingDiv.className = CSS_CLASSES.LOADING_INDICATOR;
 
     const spinner = document.createElement('div');
-    spinner.className = `
-        border-4 border-blue-500 border-t-transparent rounded-full
-        w-16 h-16 animate-spin
-    `;
+    spinner.className = CSS_CLASSES.LOADING_SPINNER;
 
     const loadingText = document.createElement('div');
     loadingText.textContent = 'Loading...';
-    loadingText.className = 'text-white text-xl mt-4 font-semibold';
+    loadingText.className = CSS_CLASSES.LOADING_TEXT;
 
     const container = document.createElement('div');
     container.className = 'flex flex-col items-center';
