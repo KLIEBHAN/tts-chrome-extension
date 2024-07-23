@@ -316,13 +316,38 @@ const UIManager = {
   tooltipElement: null,
 
   createUIElements: function() {
+
+      // Existenzprüfung für bestehende Elemente hinzufügen
+    if (document.getElementById('tts-player-host')) {
+      console.log('TTS player already exists, skipping creation');
+      return;
+    }
+
+    // Erstelle ein Shadow DOM für den Player
+    const shadowHost = document.createElement('div');
+    shadowHost.id = 'tts-player-host';
+    shadowHost.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 2147483647;
+    `;
+    const shadowRoot = shadowHost.attachShadow({mode: 'closed'});
+
+    // Füge Tailwind-Styles zum Shadow DOM hinzu
+    const style = document.createElement('style');
+    style.textContent = `@import url('${chrome.runtime.getURL('dist/style.css')}');`;
+    shadowRoot.appendChild(style);
+
     this.progressContainer = document.createElement('div');
     this.progressContainer.className = `
-        fixed top-0 left-0 right-0 h-20 bg-gray-900/60
-        flex items-center px-6 text-white shadow-lg
-        border-b border-gray-700/50 backdrop-filter backdrop-blur-sm
-        transition-all duration-300 ease-in-out
+      fixed top-0 left-0 right-0 h-20 bg-gray-900/60
+      flex items-center px-6 text-white shadow-lg
+      border-b border-gray-700/50 backdrop-filter backdrop-blur-sm
+      transition-all duration-300 ease-in-out
     `;
+
 
     // Add these lines to ensure the player is always on top
     this.progressContainer.style.zIndex = '2147483647'; // Maximum z-index value
@@ -470,9 +495,14 @@ const UIManager = {
     this.progressContainer.appendChild(createProgressBar());
     this.progressContainer.appendChild(createTimeDisplay());
     this.progressContainer.appendChild(rightControlsContainer);
-    document.body.appendChild(this.progressContainer);
 
+    shadowRoot.appendChild(this.progressContainer);
+    document.body.appendChild(shadowHost);
     StateManager.setPlayerVisibility(true);
+    this.setHighestZIndex();
+
+    // Logging für Debugging
+    console.log('TTS player created and added to DOM');
   },
 
 
@@ -705,7 +735,27 @@ const UIManager = {
     if (indicator) {
       indicator.style.display = 'none';
     }
+  },
+
+  setHighestZIndex: function() {
+    const shadowHost = document.getElementById('tts-player-host');
+    if (!shadowHost) {
+      console.error('TTS player host element not found');
+      return;
+    }
+  
+    let highestZ = Math.max(
+      ...Array.from(document.querySelectorAll('body *'))
+        .map(el => parseFloat(window.getComputedStyle(el).zIndex))
+        .filter(zIndex => !isNaN(zIndex))
+    );
+  
+    const newZIndex = Math.max(highestZ + 1, 2147483647);
+    shadowHost.style.zIndex = newZIndex.toString();
+  
+    console.log(`Highest z-index set to: ${newZIndex}`);
   }
+
 };
 
 // Main logic and message handling
