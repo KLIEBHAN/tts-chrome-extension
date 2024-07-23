@@ -98,8 +98,16 @@ const StateManager = {
   lastVolume: 1,
   playbackRate: DEFAULT_PLAYBACK_SPEED,
 
+  resetPlaybackState: function() {
+    this.isPlaying = false;
+    this.startTime = 0;
+    this.pausedAt = 0;
+    // Behalten Sie audioBuffer und andere relevante Audio-Informationen bei
+    console.log('Playback state reset, audio buffer retained');
+  },
 
   resetState: function() {
+    console.log('Resetting state');
     this.audioContext = null;
     this.source = null;
     this.gainNode = null;
@@ -117,31 +125,20 @@ const StateManager = {
 
   // Reset playback position and stop current audio source
   resetPlaybackPosition: function() {
-    this.pausedAt = 0;
-    this.startTime = 0;
-    
-    // Stop and disconnect current audio source if it exists
-    if (this.source) {
-      this.source.stop();
-      this.source.disconnect();
+    console.log('Resetting playback position');
+    if (this.audioBuffer) {
+      this.pausedAt = 0;
+      this.startTime = 0;
+      if (this.source) {
+        this.source.stop();
+        this.source.disconnect();
+      }
       this.source = null;
+      this.isPlaying = false;
+      console.log('Playback position reset successfully');
+    } else {
+      console.warn('Cannot reset playback position: No audio buffer available');
     }
-    
-    // Reset AudioContext if it exists
-    if (this.audioContext) {
-      this.audioContext.currentTime = 0;
-    }
-    
-    this.isPlaying = false;
-    
-    // Update UI
-    if (UIManager.progressBar) {
-      UIManager.updateProgressBar(0);
-    }
-    if (UIManager.timeDisplay) {
-      UIManager.timeDisplay.textContent = '0:00 / ' + formatTime(this.audioBuffer ? this.audioBuffer.duration : 0);
-    }
-    UIManager.updatePauseButton();
   },
 
   // Set playback rate and update audio source if it exists
@@ -157,7 +154,9 @@ const StateManager = {
   },
 
   hasAudio: function() {
-    return this.audioBuffer !== null;
+    const hasAudioBuffer = this.audioBuffer !== null;
+    console.log('Checking for audio:', hasAudioBuffer, 'Audio buffer:', this.audioBuffer);
+    return hasAudioBuffer;
   },
 
   // Calculate current playback time based on AudioContext time and playback rate
@@ -179,6 +178,22 @@ const AudioProcessor = {
       StateManager.gainNode = StateManager.audioContext.createGain();
       StateManager.gainNode.connect(StateManager.audioContext.destination);
     }
+  },
+
+  // Im AudioProcessor
+  setAudioData: function(audioData) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        await this.initAudioContext();
+        const arrayBuffer = new Uint8Array(audioData).buffer;
+        StateManager.audioBuffer = await StateManager.audioContext.decodeAudioData(arrayBuffer);
+        console.log('New audio data set and decoded');
+        resolve();
+      } catch (error) {
+        console.error('Error setting audio data:', error);
+        reject(error);
+      }
+    });
   },
 
   // Decode audio data and store it in StateManager
@@ -413,11 +428,11 @@ const UIManager = {
 
   // Create and append UI elements to the DOM
   createUIElements: function() {
-    // Check if player already exists
+    console.log('Starting to create UI elements');
+    
     if (document.getElementById('tts-player-host')) {
+      console.log('TTS player host already exists, removing it');
       this.removeUIElements();
-      console.log('TTS player already exists, skipping creation');
-      return;
     }
 
     // Create a Shadow DOM for the player
@@ -575,11 +590,11 @@ const UIManager = {
 
   shadowRoot.appendChild(this.progressContainer);
   document.body.appendChild(shadowHost);
+  console.log('TTS player host created and added to DOM');
+
   StateManager.setPlayerVisibility(true);
   this.setHighestZIndex();
-
-  // Logging für Debugging
-  console.log('TTS player created and added to DOM');
+  return true;
 },
 
 
@@ -704,23 +719,42 @@ const UIManager = {
 
   // Restore player UI elements
   restorePlayer: function() {
+    console.log('Attempting to restore player');
+    console.log('Current player visibility:', StateManager.isPlayerVisible);
+    console.log('Audio loaded:', StateManager.hasAudio());
+
     if (!StateManager.isPlayerVisible) {
-      this.createUIElements();
+      console.log('Player not visible, creating UI elements');
+      const uiCreated = this.createUIElements();
       
-      if (!this.progressBar || !this.pauseButton) {
-        this.showError('Failed to create UI elements. Please try again.');
-        return;
+      if (!uiCreated || !this.progressBar || !this.pauseButton) {
+        const errorMessage = 'Failed to create UI elements. Please try again.';
+        console.error(errorMessage);
+        this.showError(errorMessage);
+        return {success: false, message: errorMessage};
       }
+
   
       if (StateManager.hasAudio()) {
+        console.log('Audio found, resetting playback position');
         StateManager.resetPlaybackPosition();
         this.updateProgress();
         this.updatePauseButton();
+        if (this.timeDisplay) {
+          this.timeDisplay.textContent = `0:00 / ${formatTime(StateManager.audioBuffer.duration)}`;
+        }
+        return {success: true, message: 'Player restored successfully with previous audio'};
       } else {
-        this.showError('No audio loaded. Please select text and use "Read Aloud" to generate audio.');
+        const errorMessage = 'No audio loaded. Please select text and use "Read Aloud" to generate audio.';
+        console.warn(errorMessage);
+        this.showError(errorMessage);
+        return {success: false, message: errorMessage};
       }
     } else {
-      this.showError('The player is already visible.');
+      const errorMessage = 'The player is already visible.';
+      console.warn(errorMessage);
+      this.showError(errorMessage);
+      return {success: false, message: errorMessage};
     }
   },
 
@@ -736,10 +770,14 @@ const UIManager = {
     this.progressBar = null;
     this.pauseButton = null;
     
-    StateManager.resetState();
+    // Anstatt den gesamten Zustand zurückzusetzen, behalten wir das Audio bei
+    StateManager.setPlayerVisibility(false);
+    // Wir setzen nur die Wiedergabezustände zurück
+    StateManager.resetPlaybackState();
+    
     chrome.runtime.sendMessage({action: "playerClosed"});
     
-    console.log('Player closed and state reset');
+    console.log('Player closed, visibility set to false, playback state reset');
   },
 
   // Handle playback speed change
@@ -749,7 +787,7 @@ const UIManager = {
 
   // Display error message to the user
   showError: function(message) {
-    logError('Error:', message);
+    console.error('Showing error:', message);
     let errorDiv = document.getElementById('tts-error-message');
     if (!errorDiv) {
       errorDiv = document.createElement('div');
@@ -757,8 +795,10 @@ const UIManager = {
       errorDiv.className = CSS_CLASSES.ERROR_MESSAGE;
       document.body.appendChild(errorDiv);
     }
-    errorDiv.textContent = message;
+    errorDiv.textContent = message || 'An unknown error occurred';
     errorDiv.style.display = 'block';
+    errorDiv.style.opacity = '1';
+    errorDiv.style.transform = 'translate(-50%, 0)';
     setTimeout(() => {
       errorDiv.style.opacity = '0';
       errorDiv.style.transform = 'translate(-50%, -10px)';
@@ -878,22 +918,21 @@ const handleMessage = async (request, sender, sendResponse) => {
         UIManager.hideLoadingIndicator();
         sendResponse({success: true});
         break;
-      case 'playAudioData':
-        UIManager.hideLoadingIndicator(); // Hide loading indicator before playing audio
-        await AudioProcessor.initAudioContext();
-        await AudioProcessor.decodeAudioData(request.audioData);
-        await UIManager.togglePlayPause();
-        sendResponse({success: true});
-        break;
-        case 'restorePlayer':
-        if (StateManager.isPlayerVisible) {
-          sendResponse({success: true, message: 'Player is already visible.'});
-        } else if (!StateManager.hasAudio()) {
-          sendResponse({success: false, message: 'No audio loaded. Please select text and use "Read Aloud" to generate audio.'});
-        } else {
-          UIManager.restorePlayer();
+        case 'playAudioData':
+        UIManager.hideLoadingIndicator();
+        try {
+          await AudioProcessor.setAudioData(request.audioData);
+          await UIManager.togglePlayPause();
           sendResponse({success: true});
+        } catch (error) {
+          UIManager.showError('Failed to load audio data');
+          sendResponse({success: false, error: error.message});
         }
+      case 'restorePlayer':
+        console.log('Received restorePlayer message');
+        const result = UIManager.restorePlayer();
+        console.log('Restore player result:', result);
+        sendResponse(result);
         break;
       case 'togglePlayPause':
         await UIManager.togglePlayPause();
